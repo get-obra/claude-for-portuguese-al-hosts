@@ -22,16 +22,16 @@ It is **not** a complete implementation specification. The full specifications l
 
 The essay states the minimum specification for an architecture the guest will trust enough to engage with:
 
-1. The guest's image lands on the host's hardware, not on a platform's servers, not on a vendor's servers.
-2. The data is processed locally by Claude running on the host's machine.
+1. The guest's image is uploaded to a runtime the host operates, not to platform storage, not to vendor storage.
+2. Inference runs under the host's own API key, not the operator's.
 3. The audit trail is hash-chained and owned by the host.
 4. The telemetry that flows back to whoever is operating the system is redacted by construction.
 
 The essay claims these are not optional. This section explains why, by examining the weaker alternatives a thoughtful engineer would propose, and showing where each falls short of the trust shape the problem requires.
 
-### Property 1 — Guest data lands on the host's hardware
+### Property 1 — Guest data is uploaded to a runtime the host operates
 
-**Statement.** When a guest uploads a passport image, the bytes of that image traverse the network from the guest's device directly to a runtime running on the host's premises. The image does not transit through a vendor's server. It does not transit through the booking platform's server. The host's hardware is the *first* and *only* server that receives the unencrypted image.
+**Statement.** When a guest uploads a passport image, the bytes of that image traverse the network from the guest's device directly to a runtime running on the host's premises. The image does not transit through a vendor's server. It does not transit through the booking platform's server. The host's hardware is the first server to receive the image and the only server that stores it persistently. (Anthropic's commercial API endpoint receives the image transiently during inference — see [the data path](#the-data-path) below — under the host's own API key, with Zero Data Retention available for eligible accounts.)
 
 **Why this is necessary.** The guest's refusal to send a passport image through the booking platform's chat is not arbitrary. It is a response to the *centralization* of the channel. The objection is not to "this specific company" — it is to "any centralized intermediate." A solution that routes the image through any centralized intermediate inherits the same trust objection. The objection is structural; the solution must be structural to match it.
 
@@ -42,11 +42,11 @@ The essay claims these are not optional. This section explains why, by examining
 - **Customer-managed keys.** Sounds like the data is under the customer's control, but in practice the keys are managed by the vendor's key-management service, and the vendor still operates the runtime that decrypts the data to process it. The trust position is unchanged.
 - **On-premises vendor product (hosted-on-customer-hardware but vendor-controlled).** Closer, but still depends on the vendor's update mechanism, telemetry collection, license-server beacons, support-debugger access, and a dozen other ways the vendor retains effective access. The host does not actually control what the software does on their hardware.
 
-**How Obra implements it.** The guest-facing channel (the secure upload page the guest interacts with) runs as a process on the host's machine, served from a local port over an authenticated session. The bytes of the passport image arrive at that process and never leave it except to the local audit chain (also on the host's hardware) and the local Claude invocation (also local). No outbound network connection conveys the image bytes. Network connections that *do* exist (the Claude API for reasoning, the SIBA portal for regulatory submission, the operator-side telemetry channel for redacted metadata) carry payloads from which the image bytes are structurally absent.
+**How Obra implements it.** The guest-facing channel (the secure upload page the guest interacts with) runs as a process on the host's machine, served from a local port over an authenticated session. The bytes of the passport image arrive at that process. They are written to the host-resident audit chain. They are transmitted to Anthropic's commercial API for inference under the host's own API key (Anthropic's commercial commitments apply: no training on customer API data, Zero Data Retention available for eligible accounts) and the response returns to the host's runtime. They are not transmitted anywhere else — not to the operator (Obra), not to the booking platform, not to a vendor's server, not to a SaaS provider. The only third-party network destination the image bytes ever reach is Anthropic, transiently, for inference. The SIBA portal and the operator-side telemetry channel carry payloads from which the image bytes are structurally absent. See [the data path](#the-data-path) below for the full end-to-end walkthrough.
 
-### Property 2 — Data processed locally by Claude on the host's machine
+### Property 2 — Inference runs under the host's own API key
 
-**Statement.** The Claude invocation that reads the passport image, extracts the identity data, generates draft communications, or makes any reasoning step about guest-specific content runs against an API endpoint authenticated as the host's, with the host's API key, charged to the host's account, with the prompt-and-response pair logged only in the host's local audit chain.
+**Statement.** The Claude invocation that reads the passport image, extracts the identity data, generates draft communications, or makes any reasoning step about guest-specific content runs against an API endpoint authenticated as the host's, with the host's API key, charged to the host's account, with the prompt-and-response pair logged only in the host's local audit chain. Anthropic's commercial-API commitments apply: no training on customer API data, Zero Data Retention available for eligible accounts. The image bytes transit to Anthropic only for the duration of the inference call, and only inside the host's contractual relationship with Anthropic — the operator (Obra) is not party to that relationship.
 
 **Why this is necessary.** The guest's passport image, the guest's name, the guest's date of birth, and the host's reasoning about them are all special-category personal data under GDPR Article 9. The architecture must minimize the parties who see this data. The runtime that processes the data must be operated on behalf of the data subject's chosen counterparty (the host) and not on behalf of an intermediate vendor whose interests may diverge.
 
@@ -85,6 +85,64 @@ The essay claims these are not optional. This section explains why, by examining
 - **Customer-controlled telemetry opt-out.** Better but degrades the operator's ability to support the customer. Asymmetric incentive: hosts under stress will opt back in for support, then forget to opt out, then leak.
 
 **How Obra implements it.** The audit emitter, the connector framework, and the operator-side ingester all share a strict schema that defines exactly which event shapes can exist on the operator-side surface. The shape is defined in TypeScript as a Zod schema, validated at three points (emit-time on the host, transport-time at the shipper, ingest-time at the operator). Any field that could carry customer business content is structurally absent from the operator-side shape; the field exists only in the host-local audit chain. This is enforced at the type level (not at the runtime-filter level), which means a passport number cannot reach the operator because no operator-side schema field accepts a passport number. The boundary fix work documented elsewhere addresses the few remaining schema fields that could carry payload-shaped data via free-text reason fields or before/after state snapshots; those have been replaced with categorical hashes and structured class enums in [B1-B4 fixes shipped 2026-05-19].
+
+---
+
+## The data path
+
+The four properties above describe what the architecture is. This section describes what *happens to a guest's identity image* end-to-end, step by step. The intent is to be transparent rather than rhetorical: a thoughtful technical reader should be able to verify each step against the code, the network behavior, and the contractual relationships, and arrive at the same picture.
+
+The walkthrough below uses passport verification as the canonical example because it is the regulator-touching action with the highest sensitivity. Other extraction-heavy actions (invoice parsing, tax-document reading) follow the same path.
+
+### Step 1 — Guest device → host's runtime
+
+The guest accesses the secure-upload page on a URL that points at a process running on the host's hardware. The page is served over an authenticated session — the URL itself contains a per-reservation secret. The upload completes when the bytes of the image have transferred from the guest's device to the host's runtime, over an HTTPS connection terminated at the host's machine.
+
+The image bytes are now at rest on the host's hardware. They are not at rest on a platform's server, a vendor's server, or any cloud storage outside the host's machine.
+
+### Step 2 — Host runtime → Anthropic API → host runtime
+
+The host runtime invokes Claude via Anthropic's commercial API. The HTTPS request is authenticated with the host's own Anthropic API key (managed by the operating system's secrets store, never logged, never transmitted off the host's machine other than to Anthropic). The request payload contains the image bytes and the extraction prompt.
+
+The data is in transit between the host's machine and Anthropic's commercial API endpoint for the duration of this call. Anthropic's commercial-API commitments apply: no training on customer API data, Zero Data Retention available for eligible accounts (meaning the request payload is not persisted by Anthropic beyond the response). The response — a structured JSON payload containing the extracted identity fields — returns to the host's runtime.
+
+This is the only step in which the image bytes leave the host's hardware. They reach exactly one third party (Anthropic), transiently, under a commercial contract the host owns directly.
+
+### Step 3 — Host runtime → host-resident storage
+
+The host runtime takes the extracted JSON from Step 2 and writes it into the host's persistent storage alongside the original image. The audit chain entry for the extraction action is computed and appended to the host-resident audit chain. The chain entry includes a hash of the image bytes and a hash of the extracted payload; it does not include the image bytes or the unredacted payload.
+
+### Step 4 — Host runtime → SIBA portal (regulatory submission)
+
+When the host approves the regulatory submission, the connector framework drives the SIBA portal over a browser session (the connector reference implementation uses Playwright). The fields submitted to SIBA are the eight fields SIBA requires; the underlying image bytes are not transmitted to SIBA (the SIBA portal does not accept the image — only the typed fields). The host's runtime is the only intermediary between the extracted JSON and the regulator's portal.
+
+### Step 5 — Host runtime → operator-side telemetry (Obra)
+
+The audit emitter ships redacted events to the operator-side ingester. The events contain event types, counts, hashes of underlying payloads, structured categorical decisions (without their text reasons), and timing of operations. They do not contain the image bytes, the extracted identity fields, the host's approval reason text, or any other element of the special-category data.
+
+The operator-side ingester pins the genesis of each host's audit chain at first sight, validates the redaction schema on every event it receives, and surfaces operator-visible analytics (workflow health, drift rates, failure modes) from the redacted stream. The operator has no path to the unredacted payloads — the host-local chain holds them, and the operator-side schema cannot represent them.
+
+### Summary
+
+| Step | Actor | What touches the image bytes |
+|---|---|---|
+| 1 | Guest → host runtime | Host hardware (first server to receive) |
+| 2 | Host runtime → Anthropic API → host runtime | Anthropic (transiently, under host's own API key) |
+| 3 | Host runtime → host-resident storage | Host hardware |
+| 4 | Host runtime → SIBA portal | SIBA receives extracted fields only, never the image |
+| 5 | Host runtime → operator-side telemetry | Operator never sees the image — only hashes and metadata |
+
+The operator (Obra) does not appear in Steps 1–4 at all. Step 5 is the only step where the operator is involved, and it is structurally constrained to redacted metadata.
+
+### Anticipated upgrade paths
+
+The architecture admits two strengthening paths the design already anticipates. Neither is required at v1; both are reachable from the v1 design without re-architecting.
+
+**Hybrid extraction.** Step 2 above can be split: on-host OCR (open-source — Tesseract for the visual zone, an ICAO 9303 MRZ parser for the machine-readable zone) extracts the field strings from the image; only the extracted text — not the image bytes — is routed to Claude for reasoning, cross-check, and structured output. Under hybrid extraction, **the image bytes never leave the host's hardware at all**; the only data transmitted to Anthropic is the extracted text. This is a stronger privacy posture than the v1 design and is on the v1.5 roadmap.
+
+**Anthropic on customer-controlled compute.** Anthropic's models are available through Amazon Bedrock and Google Cloud Vertex. A customer that requires inference data to stay inside their own cloud tenancy (e.g., a customer with a strict EU data-residency contract, or a customer deploying through a small operator who hosts inside their own AWS/GCP account in Frankfurt or Lisbon) can run the host runtime against a Bedrock or Vertex endpoint instead of the public Anthropic endpoint. The inference call still goes to Claude; the data never leaves the customer's own cloud account. This is the structurally tightest deployment posture and is available today; we expect to use it for customer cohorts where the data-residency contract demands it.
+
+The reason to document both now: a thoughtful technical evaluator will ask whether the architecture has a higher privacy ceiling than the v1 shape consumes. It does. The path from v1 to either of these upgrades is incremental, and the v1 design does not foreclose either.
 
 ---
 
