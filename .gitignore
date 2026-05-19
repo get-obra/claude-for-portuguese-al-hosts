@@ -1,0 +1,36 @@
+# Local development artifacts
+.env
+.env.local
+*.log
+*.tmp
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Node (if examples use it)
+node_modules/
+package-lock.json
+
+# Python (if examples use it)
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Real customer data — never commit
+real-data/
+production-snapshots/
+*.passport.jpg
+*.passport.png
+*.passport.pdf
+
+# Local Claude config
+.claude/
