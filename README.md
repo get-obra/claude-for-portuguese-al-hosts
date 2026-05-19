@@ -61,7 +61,7 @@ Each skill is designed to be **composed by an agentic runtime** (your own, or a 
 
 The pack is opinionated about a small number of architectural choices that we believe are non-negotiable for this customer shape.
 
-**Local-first.** Customer data does not need to leave the customer's premises for these workflows to function. Claude is invoked from the customer's machine over an authenticated API connection. Passport scans, guest correspondence, and reservation history stay on the host's hardware.
+**Local-first** (operator-blind, customer-controlled inference, host-resident at rest). No third-party data processor sits between the customer and the workflow operator. Claude is invoked from the customer's machine over an authenticated API connection under the customer's *own* Anthropic API key — the customer is the data controller in that relationship, with Anthropic's commercial commitments applying (no training on customer API data; Zero Data Retention available for eligible accounts). Guest correspondence, reservation history, and the audit chain live on the host's hardware. The operator never sees the underlying data — only hashes.
 
 **Typed actions over free-text steps.** Every action a skill can take is declared in a typed contract with explicit tier classification (autonomous, gated, forbidden). A workflow cannot smuggle a novel action past human review by phrasing it cleverly.
 
