@@ -6,7 +6,38 @@ The pack contains multiple independently-versioned components (skills, connector
 
 ---
 
-## 2026-05-19 (latest — Skill 01 v0.1.1 same-evening correction)
+## 2026-05-20 (latest — Skills 02 + 03 v0.3.0: live-portal correction)
+
+Both regulator-facing skills corrected against the **live SIBA portal** (`siba.ssi.gov.pt`), observed end-to-end during first-pilot preparation. The earlier v0.2 field set was a secondary-source approximation and was wrong in several specifics.
+
+### Skill 03 — SIBA submission `v0.3.0`
+
+**Breaking** field-mapping and flow corrections from direct observation of the live `RegistaBoletins` form:
+
+- **Field set corrected from 8 to the real 11 fields**: Nome Completo, Data de Nascimento, **Local Nascimento** (place of birth, added), Nacionalidade, **Local Residência** + **País Residência** (residence split into place + country), Número Documento, Tipo Documento, **País Emissor Documento** (issuing country — *restored*; v0.2 wrongly removed it), Data de Check-in, Data de Check-out.
+- **Documented the list/batch model**: open a list (`LotesEnvio`) → per guest, "Nova BAL" unlocks the entry form → fill → **Save** commits the boletim to the list → **Enviar Lista** sends the batch to SIBA. Replaces the prior per-guest single-submit model.
+- Entry fields are **locked until "Nova BAL"**; the three date fields are **readonly calendar widgets** (date-picker, not typed).
+- **Save is irreversible** (no delete on the live portal) — host review before each Save is the load-bearing gate; Enviar Lista (the regulator send) is always the host's explicit act.
+- Input `home_address` → `residence { place, country }`.
+- Authentication claim softened (exact SIBA login mechanism pending precise live verification).
+- Portal location updated to the SSI domain (`siba.ssi.gov.pt`) following the SEF→AIMA reorganization.
+
+### Skill 02 — Guest document extraction `v0.3.0`
+
+**Breaking** output-schema corrections to match Skill 03 v0.3:
+
+- **Restored `issuing_country`** (`País Emissor`) — required by the live SIBA form; v0.2 wrongly removed it. Cross-checked by the agreement gate via the MRZ issuing-state code.
+- **Added `place_of_birth`** (`Local Nascimento`) — required by the live form; read from the document's **visual page only** (the MRZ does not encode it), so it is host-verified without an agreement cross-check.
+- Output payload grows from 6 to 8 fields; Pass A (visual) reads all 8, Pass B (MRZ) reads the 7 the MRZ encodes.
+- `expiry_date` remains dropped (not required by SIBA).
+
+### Note on provenance
+
+These corrections come from observing the real portal during pilot preparation, not from production guest data. No real guest, host, or property information is included; the field names are the portal's own public on-screen labels.
+
+---
+
+## 2026-05-19 (Skill 01 v0.1.1 same-evening correction)
 
 ### Skill 01 — Pre-arrival welcome `v0.1.1`
 

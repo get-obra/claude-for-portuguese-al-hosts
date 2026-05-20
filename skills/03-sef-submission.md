@@ -1,7 +1,7 @@
 ---
 name: 03-sef-submission
-version: 0.2.0
-description: Consumes the verified GuestIdentityPayload from Skill 02 + the home address collected by the guest-facing channel, and submits the boletim de alojamento to the SIBA portal within the legally mandated window. Host signs off on the filled form before the submission action executes. Captures the SIBA confirmation number in the audit chain.
+version: 0.3.0
+description: Consumes the verified GuestIdentityPayload from Skill 02 + the residence details collected by the guest-facing channel, and files the boletim de alojamento on the SIBA portal (siba.ssi.gov.pt) within the legally mandated window. SIBA uses a list/batch model — each guest is added to a list, then the whole list is sent. Host signs off on each filled form before it is saved, and explicitly sends the list. Captures the SIBA confirmation in the audit chain.
 tier: gated
 requires_extraction_agreement: false
 connector_dependencies:
@@ -26,7 +26,7 @@ audit_event_types:
 
 # Skill: SIBA submission
 
-> **Version 0.2.0** (2026-05-19) — schema and field mapping updated to match the actual SIBA portal field set as documented by an active Portuguese AL operator. The 8-field set: guest name, nationality, date of birth, guest home address, document type, document number, check-in date, check-out date. Removed `country_of_issue` and `document_expiry` from the field mapping (not required by SIBA). Added `home_address` as a required input from the guest-facing channel. Updated authentication model: SIBA portal uses a single string code issued at AL registration, not email/password. See CHANGELOG.md for full version history.
+> **Version 0.3.0** (2026-05-20) — schema, field mapping, and flow corrected against the **live SIBA portal** (`siba.ssi.gov.pt`, the `RegistaBoletins` form), observed end-to-end during first-pilot preparation. The earlier v0.2 8-field set was a secondary-source approximation and was wrong in several specifics. Corrections: (1) the real form has **11 fields**, adding *Local Nascimento* (place of birth), *Local Residência* + *País Residência* (residence is split into place and country), and **restoring *País Emissor Documento*** (issuing country) — which v0.2 had wrongly removed; it IS required. (2) SIBA uses a **list/batch model**: open a list, add each guest's boletim, then send the list — not a per-guest single submit. (3) The three date fields are **readonly calendar widgets** (entered via a date picker, not typed). (4) The entry fields are **locked until a "Nova BAL" action unlocks them**. (5) The portal now lives on the SSI domain (`siba.ssi.gov.pt`) following the SEF→AIMA reorganization. See CHANGELOG.md for full version history.
 
 ## Purpose
 
@@ -38,30 +38,31 @@ The skill does **not** decide whether to submit. Submission is the regulatory ba
 
 ## Regulatory note
 
-> **Authority status (2026 alpha):** SEF (Serviço de Estrangeiros e Fronteiras) was reorganized in 2023; the boletim-de-alojamento reporting obligation now sits with AIMA (Agência para a Integração, Migrações e Asilo). The SIBA portal endpoint may rename or migrate during this transition. This skill's connector binding (`sef-portal`) is the canonical name in this pack for historical continuity; the connector itself is responsible for following the live endpoint. Any change is flagged via `drift_detected` events and surfaced to the host as a runtime alert.
+> **Authority status (2026 alpha):** SEF (Serviço de Estrangeiros e Fronteiras) was reorganized in 2023; the boletim-de-alojamento reporting obligation now sits with AIMA (Agência para a Integração, Migrações e Asilo). As of the 2026 live-portal observation, the SIBA boletim system is served on the **SSI domain** (Sistema de Segurança Interna) at **`siba.ssi.gov.pt`** — the boletim entry form is `/S/bal/RegistaBoletins.aspx`, reached from the submission-lists page (`/S/bal/LotesEnvio.aspx`). This skill's connector binding (`sef-portal`) is the canonical name in this pack for historical continuity; the connector itself follows the live endpoint. Any change is flagged via `drift_detected` events and surfaced to the host as a runtime alert.
 
-> **Authentication model:** AL operators authenticate to the SIBA portal using a single string code issued by SEF at AL registration. There is no email/password login. The connector framework's auth model for `sef-portal` treats this as a single-secret credential stored in the operating system's secrets store, scoped to this connector, never logged.
+> **Authentication model:** AL operators authenticate to the SIBA portal with credentials issued at AL registration, scoped through the secrets broker, stored in the operating system's secrets store, never logged. The exact SIBA login mechanism (single access code vs. user/password) is **pending precise live verification** — the connector treats it as a scoped credential set regardless. Per the local-first model, the human logs in interactively where possible so credentials are entered by hand and never stored in plaintext by the runtime.
 
 > **Submission window (2026 alpha):** the current practical guidance is *within the legally mandated window after arrival*. This skill reads the configured window from the host's locale settings rather than hard-coding "24 hours" or "3 working days," so a regulatory update is a configuration change rather than a code change. Founders deploying this skill should verify the current window with their compliance counsel before going live.
 
 ## Input
 
-The verified identity payload from Skill 02, plus the home address collected via the guest-facing channel, plus the reservation context the runtime already has.
+The verified identity payload from Skill 02, plus the residence details collected via the guest-facing channel, plus the reservation context the runtime already has.
 
 ```
 SibaSubmissionInput {
-  identity: GuestIdentityPayload         // verified output of Skill 02 (v0.2.0)
-  home_address: string                    // guest's home-country address; collected as typed input
-                                          // via the guest-facing channel alongside the document image
-                                          // (not present on the document itself)
+  identity: GuestIdentityPayload         // verified output of Skill 02 — must include place_of_birth + issuing_country
+  residence: {
+    place: string                         // Local Residência — city / address; typed via the guest-facing channel
+    country: string                       // País Residência — country of residence (Portuguese label)
+  }
   reservation: {
     reservation_id: string               // ties this submission to the booking and the audit chain
     arrival_date: ISO-8601 date
     departure_date: ISO-8601 date
     property: {
       al_registration_number: string     // host's official AL number with Turismo de Portugal
-      siba_login_code: string            // host's SIBA portal access code (single-string credential
-                                          // issued at SEF registration; scoped via secrets broker)
+      siba_credentials_ref: string        // reference to the host's SIBA login, scoped via the secrets
+                                          // broker, never inlined here (exact mechanism per the auth note above)
     }
   }
   host: {
@@ -103,29 +104,37 @@ Before doing anything that touches the portal, the skill computes the idempotenc
 
 ### Step 2 — Authenticated portal session
 
-The connector opens an authenticated session against the SIBA portal using the host's `siba_login_code` (a single string code issued at AL registration; scoped through the secrets broker, never logged). If the session fails to establish (wrong code, portal down, code revoked), the skill halts with `halt_portal_unavailable` and a retry-after timestamp.
+The connector opens an authenticated session against the SIBA portal (`siba.ssi.gov.pt`) using the host's scoped credentials (entered interactively where possible; never logged). If the session fails to establish (bad credentials, portal down), the skill halts with `halt_portal_unavailable` and a retry-after timestamp.
 
-### Step 3 — Form fill
+### Step 3 — Open the submission list
 
-The connector navigates to the boletim submission form and fills the fields from the input payload, per the field mapping below. Field-fill is per-field deterministic: each input field maps to exactly one output field on the form. There is no AI interpretation of the page layout at this stage; the connector uses pinned selectors.
+SIBA works on a **list (lote) model**: boletins are added to a list, then the whole list is sent as a batch. The connector opens the submission-lists page (`LotesEnvio`) and starts (or resumes) a list, landing on the boletim entry form (`RegistaBoletins`). A list can hold one or many guests' boletins.
 
-If any selector fails to match (form changed), the skill halts with `halt_drift_detected` and a structured description of what failed. No partial submission is attempted; the form is abandoned cleanly.
+### Step 4 — Per-guest form fill (unlock → fill → review → save)
 
-### Step 4 — Host final review
+For each guest in the submission, the connector:
 
-The filled form is rendered to the host as a structured summary, with each field labelled and the source highlighted (which fields came from Skill 02 vs. from the guest-facing channel vs. from the reservation context). The host sees:
+1. **Unlocks the entry form.** The boletim fields are readonly/disabled until a **"Nova BAL"** (new boletim) action is triggered; the connector triggers it before filling. (Skipping this is why a naive fill silently fails — the fields aren't editable yet.)
+2. **Fills the fields** from the payload, per the field mapping below. Field-fill is per-field deterministic — each input maps to exactly one form field; no AI interpretation of the page layout. Text fields and dropdowns are filled with real interactions; the three **date fields are readonly calendar widgets** handled by the connector's date-control routine.
+3. **Surfaces the filled boletim to the host for review, then Saves it to the list.** The per-entry **Save** commits the boletim to the list; it is not yet sent to the regulator.
 
-- The six identity fields from Skill 02
-- The home address from the guest-facing channel
+If a selector fails to match (form changed), the skill halts with `halt_drift_detected`. No partial entry is saved; the form is abandoned cleanly.
+
+> **Save is effectively irreversible on this portal.** The live SIBA portal offers no delete for a saved boletim — a wrong save must be corrected by contacting the authority directly. So the host's review **before each Save** is the load-bearing gate: nothing unverified is ever saved. Any field the connector cannot yet fill with full confidence (e.g. the readonly calendar dates, until that path is validated end-to-end) is entered by the host by hand while the connector fills the rest — a deliberate hybrid that keeps the irreversible step certain.
+
+### Step 5 — Host final review and send (Enviar Lista)
+
+When the list is complete, it is rendered to the host as a structured summary — each boletim, each field labelled with its source (Skill 02 vs. guest-facing channel vs. reservation context). The host sees:
+
+- The identity fields from Skill 02 (name, date of birth, place of birth, nationality, document type, document number, issuing country)
+- The residence place + country from the guest-facing channel
 - The arrival/departure dates from the reservation
-- A primary action: **Submit to SIBA** (with a dwell timer per the connector framework's gating rule)
-- A secondary action: **Reject and explain** (which abandons the submission and emits `host_rejected_final_review` with the host's stated reason)
+- A primary action: **Enviar Lista — send to SIBA** (with a dwell timer per the connector framework's gating rule)
+- A secondary action: **Reject and explain** (abandons the send; emits `host_rejected_final_review` with the host's stated reason)
 
-The dwell timer's purpose is to fight rubber-stamping. The host cannot click submit immediately; she must dwell on the form long enough that visual review is plausible. The configured dwell time defaults to ten seconds for first-pilot operators and scales down as historical false-positive rates inform the runtime.
+The dwell timer fights rubber-stamping: the host cannot send immediately; she must dwell long enough that review is plausible (default ten seconds for first-pilot operators). **The send (Enviar Lista) is the regulator-touching action and is always the host's explicit act — the runtime never sends a list autonomously.**
 
-### Step 5 — Submission
-
-On host approval, the connector clicks the SIBA portal's submit action. The portal's response is captured: success → confirmation number + timestamp + a downloadable receipt PDF; failure → a SIBA error message that the connector parses into a structured `submission_failed` or `halt_validation_rejected_by_siba` result.
+On host send, the connector triggers "Enviar Lista". The portal's response is captured: success → confirmation + timestamp + a downloadable receipt; failure → a SIBA error parsed into a structured `submission_failed` or `halt_validation_rejected_by_siba` result.
 
 ### Step 6 — Receipt capture and notification
 
@@ -133,20 +142,23 @@ On success, the receipt PDF is stored locally alongside the audit chain entry (n
 
 ## Field mapping (input → SIBA boletim)
 
-The eight fields SIBA actually requires, as documented by an active Portuguese AL operator:
+The **11 fields** on the live SIBA boletim form (`RegistaBoletins`), with the exact on-screen labels:
 
-| SIBA field | Source | Notes |
+| SIBA field (form label) | Source | Notes |
 |---|---|---|
-| Nome (guest name) | `identity.surname` + `identity.given_names` | family-name-first ordering per Skill 02's output |
-| Nacionalidade (nationality) | `identity.nationality` | ISO-3166-alpha-3 |
-| Data de nascimento (date of birth) | `identity.date_of_birth` | YYYY-MM-DD |
-| Morada (guest's home address) | `home_address` | typed input collected via the guest-facing channel; NOT on the identity document |
-| Tipo de documento (document type) | `identity.document_type` | `passport` / `national_id` / `residence_permit` |
-| Número do documento (document number) | `identity.document_number` | strip leading zeros only if the MRZ form also stripped them |
-| Data de check-in (arrival date) | `reservation.arrival_date` | YYYY-MM-DD |
-| Data de check-out (planned departure) | `reservation.departure_date` | YYYY-MM-DD |
+| Nome Completo | `identity.surname` + `identity.given_names` | full name |
+| Data de Nascimento | `identity.date_of_birth` | **readonly calendar widget** (date picker; `dd-mm-yyyy`) |
+| Local Nascimento | `identity.place_of_birth` | from the document's visual page (not the MRZ) — Skill 02 must capture it |
+| Nacionalidade | `identity.nationality` | dropdown of Portuguese-language country names |
+| Local Residência | `residence.place` | typed input via the guest-facing channel (city / address) |
+| País Residência | `residence.country` | dropdown of PT country names; collected with the residence |
+| Número Documento | `identity.document_number` | |
+| Tipo Documento | `identity.document_type` | dropdown: **PASSAPORTE / BILHETE DE IDENTIDADE / OUTROS** |
+| País Emissor Documento | `identity.issuing_country` | dropdown of PT country names — **required** (v0.2 wrongly removed this) |
+| Data de Check-in | `reservation.arrival_date` | **readonly calendar widget** |
+| Data de Check-out | `reservation.departure_date` | **readonly calendar widget** |
 
-**Field set confirmation history.** v0.1 of this skill mapped to 11 fields including `country_of_issue`, `document_expiry`, and a multi-component property address. v0.2 reduces to the 8 fields above based on primary-source documentation from an active AL operator. Confirmation of `sex` field requirement (and any additional fields SIBA may require for non-passport document types) is still pending live-portal validation during first pilot. The `siba_login_code` is consumed by the connector for authentication; it is NOT a form field.
+**Field-set correction history.** v0.1 guessed 11 fields (some wrong). v0.2 cut to 8 from secondary-source documentation — but that cut was over-aggressive: it dropped *País Emissor* (issuing country), which the live form **requires**; it collapsed residence into one "address" field when the form splits it into *Local Residência* + *País Residência*; and it missed *Local Nascimento*. The table above is the field set observed **directly on the live `RegistaBoletins` form** (2026-05-20). The four dropdowns (nationality, residence country, document type, issuing country) take Portuguese-language labels. Any further field SIBA may require for specific document types is flagged via `drift_detected` if the connector encounters it. Login credentials are consumed by the connector; they are NOT form fields.
 
 ## Failure modes and escalation triggers
 
@@ -191,11 +203,11 @@ Per the redacted-by-construction principle, raw identity values are never emitte
 A guest arrived this morning. Skill 02 verified the passport. The host's runtime invokes Skill 03 with the verified payload and the reservation context.
 
 1. Idempotency check: no prior submission for this key. Proceed.
-2. Authenticated session established on SIBA.
-3. Form filled with the seven identity fields + four reservation fields. No drift.
-4. Host sees the filled form, dwells the ten-second timer, clicks **Submit to SIBA**.
-5. SIBA returns confirmation number `SIBA-2026-05-19-AAA-001234` and a receipt PDF.
-6. Host receives a WhatsApp message: *"Boletim submetido. Número de confirmação SIBA-2026-05-19-AAA-001234. Recibo guardado localmente."*
+2. Authenticated session established on SIBA (`siba.ssi.gov.pt`).
+3. New list opened. "Nova BAL" unlocks the entry form; the connector fills the 11 fields (the 8 text/dropdown fields directly; the 3 calendar dates per the validated date routine, or by the host in hybrid mode). No drift.
+4. Host reviews the filled boletim, **Saves** it to the list, dwells the ten-second timer, and clicks **Enviar Lista**.
+5. SIBA returns confirmation `SIBA-2026-05-20-AAA-001234` and a receipt.
+6. Host receives a WhatsApp message: *"Boletim submetido. Número de confirmação SIBA-2026-05-20-AAA-001234. Recibo guardado localmente."*
 
 Total wall-clock: ~30 seconds of host attention, ~90 seconds end-to-end.
 
@@ -232,7 +244,18 @@ The operator-side dashboard receives the same `drift_detected` event; the connec
 
 ## Versioning
 
-`v0.2.0` — alpha. See `CHANGELOG.md` at the repo root for the full version history.
+`v0.3.0` — alpha. See `CHANGELOG.md` at the repo root for the full version history.
+
+**v0.3.0 changes vs. v0.2.0** (corrected against the live `siba.ssi.gov.pt` portal, observed 2026-05-20):
+- Field mapping corrected to the real **11 fields** on the `RegistaBoletins` form
+- **Restored `País Emissor` (issuing country)** — v0.2 wrongly removed it; the live form requires it
+- Split residence into `Local Residência` (place) + `País Residência` (country); input `home_address` → `residence { place, country }`
+- Added `Local Nascimento` (place of birth) — Skill 02 must now capture `place_of_birth` + `issuing_country`
+- Documented the **list/batch model** (open list → per-guest Nova BAL unlock → fill → Save → Enviar Lista), replacing the per-guest single-submit model
+- Documented that the three date fields are **readonly calendar widgets**, and that entry fields are **locked until "Nova BAL"**
+- Noted **Save is irreversible** (no delete) — host review before each Save is the load-bearing gate
+- Softened the authentication claim (exact SIBA login mechanism pending precise live verification)
+- Portal location updated to the SSI domain (`siba.ssi.gov.pt`)
 
 **v0.2.0 changes vs. v0.1.0:**
 - Input payload `PassportIdentityPayload` → `GuestIdentityPayload` (broader scope; see Skill 02 v0.2 changelog)

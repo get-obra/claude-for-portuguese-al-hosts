@@ -1,6 +1,6 @@
 ---
 name: 02-guest-document-extraction
-version: 0.2.0
+version: 0.3.0
 description: Reads a guest identity document (passport, EU national ID card, residence permit) and produces a verified structured identity payload ready for SIBA submission. Runs the pre-proposal extraction agreement gate (visual fields vs. MRZ) before presenting results to the host for sign-off.
 tier: gated
 requires_extraction_agreement: true
@@ -22,7 +22,7 @@ audit_event_types:
 
 # Skill: Guest document extraction with agreement gate
 
-> **Version 0.2.0** (2026-05-19) — broadened from passport-only to all guest identity documents accepted by SIBA. Schema updated to match the actual SIBA field set as documented by an active Portuguese AL operator: dropped `country_of_issue` + `expiry_date` (not required by SIBA portal), added `home_address` (collected separately via the guest-facing channel since it is not present on most identity documents). Document type expanded beyond passport to cover national IDs and residence permits. See CHANGELOG.md for full version history.
+> **Version 0.3.0** (2026-05-20) — corrected against the live SIBA portal (see Skill 03 v0.3.0). The v0.2 schema wrongly dropped the document's **issuing country**, which the live SIBA form (*País Emissor Documento*) **requires** — it is restored here. Also added **place of birth** (*Local Nascimento*), which the form requires and which is read from the document's visual page only (the MRZ does not encode it, so the agreement gate cannot cross-check it; the host verifies it directly). `expiry_date` remains dropped (SIBA does not require it). Document-type coverage (passport / national ID / residence permit) and the residence-collected-separately note are unchanged from v0.2. See CHANGELOG.md for full version history.
 
 ## Purpose
 
@@ -72,10 +72,12 @@ GuestIdentityPayload {
   document_number: string                 // alphanumeric; format varies by issuing country and document type
   nationality: ISO-3166-alpha-3           // e.g., "FRA" for France
   date_of_birth: ISO-8601 date            // YYYY-MM-DD
+  issuing_country: ISO-3166-alpha-3       // País Emissor — SIBA requires it; encoded in the MRZ + on the visual page
+  place_of_birth: string                  // Local Nascimento — SIBA requires it; VISUAL PAGE ONLY (not in the MRZ)
 }
 ```
 
-> **Schema status (v0.2 alpha):** the six-field set above reflects the SIBA portal's actual field requirements as documented by an active Portuguese AL operator. Compared to v0.1: `country_of_issue` and `expiry_date` were removed (SIBA does not require them); document_type was broadened beyond passport-only; the field formerly called `passport_number` is now `document_number` to match the broader scope. The `home_address` field that SIBA additionally requires is collected separately via the guest-facing channel (it is not present on most identity documents) and passed to Skill 03 alongside this skill's output. Confirmation of `sex` field requirement (and any additional fields) is still pending live-portal validation during first pilot.
+> **Schema status (v0.3 alpha):** the eight-field set above reflects the live SIBA portal's actual requirements (observed 2026-05-20; see Skill 03 v0.3.0). `issuing_country` (*País Emissor*) is **required** and was wrongly removed in v0.2 — restored. `place_of_birth` (*Local Nascimento*) is **required** and is read from the visual page only — the MRZ does not encode it, so it cannot be cross-checked by the agreement gate and is host-verified directly. `expiry_date` remains dropped (not required). Residence (*Local Residência* + *País Residência*) is collected separately via the guest-facing channel and passed to Skill 03. Any further field (e.g. `sex`) is flagged via drift if the live form turns out to require it.
 
 ## The two-pass agreement gate
 
@@ -87,7 +89,7 @@ Read the printed identity fields on the document. These are the human-readable v
 
 The prompt for Pass A focuses Claude on the visual content:
 
-> "You are looking at a guest identity document — a passport, EU national ID card, or residence permit. Read only the printed, human-readable identity fields. Do not read the machine-readable zone (the lines of `<` characters). Return the six identity fields as structured data: surname, given names, document type, document number, nationality, date of birth. If any field is illegible, return `null` for that field rather than guessing."
+> "You are looking at a guest identity document — a passport, EU national ID card, or residence permit. Read only the printed, human-readable identity fields. Do not read the machine-readable zone (the lines of `<` characters). Return these fields as structured data: surname, given names, document type, document number, nationality, date of birth, **place of birth**, and **issuing country**. If any field is illegible, return `null` for that field rather than guessing."
 
 ### Pass B — MRZ read and parse
 
@@ -97,19 +99,22 @@ Passport MRZ uses ICAO 9303 TD3 (two lines, 44 characters each). EU national ID 
 
 The prompt for Pass B focuses Claude on the MRZ:
 
-> "You are looking at a guest identity document. Read only the machine-readable zone (the lines of OCR-optimized characters with `<` fillers). Do not read the printed visual fields. Identify whether this is TD1 (three lines, 30 chars each — typically national ID), TD2, or TD3 (two lines, 44 chars each — typically passport) MRZ format. Transcribe the MRZ exactly, character by character. Then parse it per ICAO 9303 into the six identity fields. Verify every check digit. If any check digit fails, return a check-digit error rather than the parsed values."
+> "You are looking at a guest identity document. Read only the machine-readable zone (the lines of OCR-optimized characters with `<` fillers). Do not read the printed visual fields. Identify whether this is TD1 (three lines, 30 chars each — typically national ID), TD2, or TD3 (two lines, 44 chars each — typically passport) MRZ format. Transcribe the MRZ exactly, character by character. Then parse it per ICAO 9303 into the fields the MRZ encodes: surname, given names, document type, document number, nationality, date of birth, and **issuing country** (the issuing-state code). The MRZ does **not** encode place of birth. Verify every check digit. If any check digit fails, return a check-digit error rather than the parsed values."
 
 ### Comparison
 
-Both passes return the six identity fields. The comparison logic walks them field by field:
+Pass A returns all eight fields; Pass B returns the seven the MRZ encodes (place of birth is visual-only). The comparison logic walks the seven shared fields:
 
 1. **Surname, given names**: case-insensitive, accent-folded, whitespace-normalized comparison. The MRZ uses `<` as a name separator and substitutes some Unicode characters; normalize both sides to a common form before comparing.
 2. **Document type**: exact match (passport / national_id / residence_permit). Disagreement here indicates one of the reads misidentified the document; halt.
 3. **Document number**: exact string match after stripping spaces. (Some countries pad with leading zeros; strip leading zeros only if both reads agree on the stripped form.)
 4. **Nationality**: exact ISO-3166-alpha-3 match.
 5. **Date of birth**: exact ISO-8601 match. (The MRZ uses YYMMDD with a century-disambiguation rule per ICAO 9303 §4.2.2.5; the parser must apply the rule correctly.)
+6. **Issuing country**: exact ISO-3166-alpha-3 match. The MRZ encodes the issuing state in line 1; the visual page shows it on the data page.
 
-If every field matches → **status: agreed**, proceed to host verification.
+**Place of birth** is read by Pass A only (it is not in the MRZ), so it cannot be cross-checked — the host verifies it directly against the document at sign-off.
+
+If every shared field matches → **status: agreed**, proceed to host verification.
 If any field disagrees → **status: halt_disagreement**, present both reads side by side to the host with the original image.
 If the MRZ is missing or any check digit fails → **status: halt_unreadable**, escalate.
 
@@ -140,7 +145,7 @@ Each escalation emits a structured audit event and presents the host with both t
 When the agreement gate passes, the host sees:
 
 - The original image, zoomable, with each extracted field annotated with a callout pointing to the source on the image
-- The seven extracted fields, each editable, each marked with a confidence indicator
+- The eight extracted fields, each editable, each marked with a confidence indicator (place of birth, read from the visual page only, is flagged as not MRZ-cross-checked)
 - A single primary action: **Sign off and continue** (which moves to Skill 03)
 - A secondary action: **Reject and request a new photo** (which generates a draft message back to the guest in their language; see escalation flow below)
 
@@ -202,6 +207,8 @@ To be explicit about scope:
 
 ## Worked examples
 
+> The JSON snippets below show the core cross-checked fields for brevity. v0.3 also extracts `issuing_country` (cross-checked via the MRZ) and `place_of_birth` (read from the visual page only, host-verified).
+
 ### Example A — Agreement, smooth verification (passport)
 
 **Input:** Clear photo of a French passport uploaded through the guest-facing channel.
@@ -218,15 +225,15 @@ To be explicit about scope:
 P<FRADUBOIS<<MARIE<CLAIRE<<<<<<<<<<<<<<<<<<<
 12AB345674FRA8503125F3008221<<<<<<<<<<<<<<04
 ```
-Parsed (note: SIBA does not require expiry_date or country_of_issue, so those MRZ fields are decoded for check-digit validation but not surfaced to the output payload):
+Parsed (note: SIBA does not require `expiry_date`, so it is decoded for check-digit validation only; the **issuing country** IS surfaced to the payload, and **place of birth** comes from the visual read since the MRZ does not carry it):
 ```
 { surname: "DUBOIS", given_names: "MARIE CLAIRE",
   document_type: "passport", document_number: "12AB34567",
   nationality: "FRA", date_of_birth: "1985-03-12" }
 ```
 
-**Comparison:** All six fields match. Status: `extraction_agreed`.
-**Host UI:** six fields displayed with image callouts. Host clicks **Sign off and continue**. Status: `host_verified`. Payload passes to Skill 03 along with the home_address collected separately.
+**Comparison:** All cross-checked fields match. Status: `extraction_agreed`.
+**Host UI:** all fields displayed with image callouts. Host clicks **Sign off and continue**. Status: `host_verified`. Payload passes to Skill 03 along with the residence details collected separately.
 
 ### Example B — Agreement, EU national ID card
 
@@ -252,7 +259,7 @@ Parsed:
   nationality: "DEU", date_of_birth: "1992-07-04" }
 ```
 
-**Comparison:** All six fields match. Status: `extraction_agreed`. Same downstream flow as Example A.
+**Comparison:** All cross-checked fields match. Status: `extraction_agreed`. Same downstream flow as Example A.
 
 ### Example C — Disagreement on document number, host resolves
 
@@ -283,7 +290,13 @@ Status: `halt_unreadable` with reason `mrz_check_digit_failed`.
 
 ## Versioning
 
-This skill is `v0.2.0` — alpha, in active development against the first pilot. See `CHANGELOG.md` at the repo root for the full version history. Breaking changes to the output schema are possible during alpha and are called out in CHANGELOG.
+This skill is `v0.3.0` — alpha, in active development against the first pilot. See `CHANGELOG.md` at the repo root for the full version history. Breaking changes to the output schema are possible during alpha and are called out in CHANGELOG.
+
+**v0.3.0 changes vs. v0.2.0** (corrected against the live SIBA portal, 2026-05-20):
+- **Restored `issuing_country`** (`País Emissor`) — v0.2 wrongly removed it; the live form requires it (cross-checked via the MRZ issuing-state code)
+- **Added `place_of_birth`** (`Local Nascimento`) — required by the live form; read from the visual page only (not in the MRZ), so host-verified without an agreement cross-check
+- Output payload grows from 6 to 8 fields; Pass A reads all 8, Pass B reads the 7 the MRZ encodes
+- `expiry_date` remains dropped (not required)
 
 **v0.2.0 changes vs. v0.1.0:**
 - Renamed from `02-passport-extraction` to `02-guest-document-extraction` (broader scope)
