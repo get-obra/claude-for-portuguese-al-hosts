@@ -40,5 +40,5 @@ Welcome via pull request. The high-leverage areas right now:
 
 - **More language baselines** for Skill 01 (Italian, Dutch, Polish, Mandarin queued for native-speaker review)
 - **More document-type coverage** for Skill 02 (non-EU national IDs with different MRZ shapes)
-- **Connector contributions** under [`/connectors/`](../connectors/) — `sef-portal/` is the priority for Skill 03 to ship runnable
+- **Connector contributions** under [`/connectors/`](../connectors/). `sef-portal/` is the priority for Skill 03 to ship runnable
 - **Edge cases** from anyone running this stack against real reservations

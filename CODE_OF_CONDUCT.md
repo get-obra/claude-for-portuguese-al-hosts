@@ -22,7 +22,7 @@ For the canonical definitions and examples of unacceptable conduct, we adopt the
 
 ## Scope
 
-This Code of Conduct applies to all project spaces — issues, pull requests, discussions, mailing lists, chat channels, and any in-person or online events held under the project's name. It also applies when an individual is officially representing the project in public.
+This Code of Conduct applies to all project spaces: issues, pull requests, discussions, mailing lists, chat channels, and any in-person or online events held under the project's name. It also applies when an individual is officially representing the project in public.
 
 ## Enforcement
 
@@ -43,4 +43,4 @@ This Code of Conduct is informed by the [Contributor Covenant version 2.1](https
 
 ## Questions
 
-For anything that is not a conduct report — clarifications, suggestions, additions — feel free to open an issue or reach out at `team@get-obra.com`.
+For anything that is not a conduct report (clarifications, suggestions, additions), feel free to open an issue or reach out at `team@get-obra.com`.

@@ -66,7 +66,7 @@ The intuitive answer is *the platforms should just build this*. The platforms ca
 
 The guests' refusal to send passport images is not arbitrary. It is a response to the *centralization* of the channel they are being asked to send it through. The guest does not trust the booking platform with their special-category identity data. A hosted SaaS vendor solving the problem on the platform's behalf would inherit exactly the same trust position, because the guest would correctly perceive the SaaS vendor as another centralized party that the data has to flow through. The data has not become more private; it has just changed which company holds it.
 
-The problem is not a missing feature. The problem is that the architecture of every existing party — platform, vendor, hosted-SaaS — is incompatible with the trust shape the guest is asking for. Centralization is the substrate the problem grows on. Any solution that runs on the same substrate cannot grow a different fruit.
+The problem is not a missing feature. The problem is that the architecture of every existing party, platform, vendor, hosted-SaaS, is incompatible with the trust shape the guest is asking for. Centralization is the substrate the problem grows on. Any solution that runs on the same substrate cannot grow a different fruit.
 
 The architecture that can close this gap has four properties that are not optional:
 
@@ -79,7 +79,7 @@ This is not a list of marketing claims. It is the actual minimum specification f
 
 The corollary is that the architecture the gap requires is one that **the parties who have the distribution to deploy at scale cannot build**, and the parties who can build it (small, independent, structurally local-first) lack the distribution. This is the textbook shape of a market gap that compounds the longer it remains unaddressed.
 
-The architecture also admits two strengthening paths the design already anticipates. Hybrid extraction — on-host OCR and machine-readable-zone parsing, with only extracted text fields routed to Claude — keeps the image bytes from leaving the host's hardware at all. Inference on customer-controlled cloud compute via Amazon Bedrock or Google Vertex keeps the data inside the customer's own EU cloud tenancy. Neither is required for the first pilot; both are reachable from the v1 design without re-architecting. The architecture's privacy ceiling is higher than the v1 shape consumes.
+The architecture also admits two strengthening paths the design already anticipates. Hybrid extraction, on-host OCR and machine-readable-zone parsing, with only extracted text fields routed to Claude, keeps the image bytes from leaving the host's hardware at all. Inference on customer-controlled cloud compute via Amazon Bedrock or Google Vertex keeps the data inside the customer's own EU cloud tenancy. Neither is required for the first pilot; both are reachable from the v1 design without re-architecting. The architecture's privacy ceiling is higher than the v1 shape consumes.
 
 ---
 

@@ -1,6 +1,6 @@
 # Contributing
 
-Thank you for considering a contribution to **Claude for Portuguese AL hosts**. This pack is open source under Apache 2.0 because the operators it serves — independent Portuguese vacation rental hosts and the small businesses adjacent to them — benefit when the work is shared.
+Thank you for considering a contribution to **Claude for Portuguese AL hosts**. This pack is open source under Apache 2.0 because the operators it serves (independent Portuguese vacation rental hosts and the small businesses adjacent to them) benefit when the work is shared.
 
 ## What we want
 

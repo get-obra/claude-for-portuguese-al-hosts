@@ -7,8 +7,8 @@ Maintained by [Obra](https://get-obra.com). Released under Apache 2.0.
 > **Status:** alpha, in active development. This README describes the intended shape of the pack as it ships. Skill content, connector implementation, and example transcripts arrive over the coming weeks. See [Status](#status) for the timeline.
 
 > **Start here.** The two depth pieces, in reading order:
-> 1. *[The trust gap](docs/the-trust-gap.md)* — the narrative essay on why this work exists. Canonical version at [get-obra.com/the-trust-gap](https://get-obra.com/the-trust-gap). ~10 min read.
-> 2. *[Architecture](docs/ARCHITECTURE.md)* — the engineer-readable mechanism behind the essay's claims. Defends the four architectural properties, documents the connector framework, the three-gate trust pillar, the pre-proposal extraction agreement gate, and the audit chain. ~20 min read.
+> 1. *[The trust gap](docs/the-trust-gap.md)*: the narrative essay on why this work exists. Canonical version at [get-obra.com/the-trust-gap](https://get-obra.com/the-trust-gap). ~10 min read.
+> 2. *[Architecture](docs/ARCHITECTURE.md)*: the engineer-readable mechanism behind the essay's claims. Defends the four architectural properties, documents the connector framework, the three-gate trust pillar, the pre-proposal extraction agreement gate, and the audit chain. ~20 min read.
 
 ---
 
@@ -35,7 +35,7 @@ This repository is the open-source reference pack for that shape of work. It pro
 
 ## How this pack frames the work
 
-**Obra reduces an operator's workload to verification.** The AI does the labor — drafting emails, reading scans, filling forms, generating records. The human keeps the decisions — approving the email before it sends, confirming the extracted passport numbers, signing off on the figures the accountant will file.
+**Obra reduces an operator's workload to verification.** The AI does the labor: drafting emails, reading scans, filling forms, generating records. The human keeps the decisions: approving the email before it sends, confirming the extracted passport numbers, signing off on the figures the accountant will file.
 
 This is not a fire-and-forget automation pack. It is a labor-reduction-with-verification-kept-human pack. Every skill in this pack assumes a human reviewer is in the loop on anything that touches the regulator, the guest's money, or the operator's reputation. The skill files are explicit about which tier each action lives in (autonomous, gated, forbidden) and where the human's sign-off lands in the flow.
 
@@ -61,11 +61,11 @@ Each skill is designed to be **composed by an agentic runtime** (your own, or a 
 
 The pack is opinionated about a small number of architectural choices that we believe are non-negotiable for this customer shape.
 
-**Local-first** (operator-blind, customer-controlled inference, host-resident at rest). No third-party data processor sits between the customer and the workflow operator. Claude is invoked from the customer's machine over an authenticated API connection under the customer's *own* Anthropic API key — the customer is the data controller in that relationship, with Anthropic's commercial commitments applying (no training on customer API data; Zero Data Retention available for eligible accounts). Guest correspondence, reservation history, and the audit chain live on the host's hardware. The operator never sees the underlying data — only hashes.
+**Local-first** (operator-blind, customer-controlled inference, host-resident at rest). No third-party data processor sits between the customer and the workflow operator. Claude is invoked from the customer's machine over an authenticated API connection under the customer's *own* Anthropic API key. The customer is the data controller in that relationship, with Anthropic's commercial commitments applying (no training on customer API data; Zero Data Retention available for eligible accounts). Guest correspondence, reservation history, and the audit chain live on the host's hardware. The operator never sees the underlying data, only hashes.
 
 **Typed actions over free-text steps.** Every action a skill can take is declared in a typed contract with explicit tier classification (autonomous, gated, forbidden). A workflow cannot smuggle a novel action past human review by phrasing it cleverly.
 
-**Pre-proposal agreement on critical extractions.** On extraction-heavy actions like reading a passport scan or parsing an invoice, two independent Claude passes must agree on the extracted payload before the action enters the review pipeline. If they disagree, the action halts and lands in the human's hands for manual verification. This catches the class of hallucination that traditional adversarial review cannot reach — where both Claude invocations reasoning over the same proposed payload could silently agree on a misread.
+**Pre-proposal agreement on critical extractions.** On extraction-heavy actions like reading a passport scan or parsing an invoice, two independent Claude passes must agree on the extracted payload before the action enters the review pipeline. If they disagree, the action halts and lands in the human's hands for manual verification. This catches the class of hallucination that traditional adversarial review cannot reach: where both Claude invocations reasoning over the same proposed payload could silently agree on a misread.
 
 **Three independent gates on risky actions.** Anything that touches the regulator, the guest's money, or external systems passes through three checks: structured reasoning by Claude, adversarial review by a second Claude invocation, and human confirmation. Hallucinations cannot act unilaterally.
 
@@ -121,9 +121,9 @@ Contributions from Portuguese AL hosts, accountants, developers familiar with th
 Areas where we especially want help:
 
 - **More language coverage** for the pre-arrival welcome skill (French, Spanish, German, Italian, Dutch, and Portuguese covered; English is the default).
-- **SEF portal robustness** — the portal occasionally changes its DOM. We want a community of contributors keeping the connector contract current.
+- **SEF portal robustness**: the portal occasionally changes its DOM. We want a community of contributors keeping the connector contract current.
 - **Test fixtures** with synthetic passport scans for as many issuing countries as possible.
-- **Regulatory clarifications** — if you are a Portuguese tax lawyer or compliance professional and you see something we have stated incorrectly, please open an issue.
+- **Regulatory clarifications**: if you are a Portuguese tax lawyer or compliance professional and you see something we have stated incorrectly, please open an issue.
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for the contributor workflow.
 
@@ -145,5 +145,5 @@ Apache License 2.0. See [LICENSE](LICENSE).
 
 ## Related
 
-- [Obra](https://get-obra.com) — managed-service deployment of these skills for hosts who do not want to run the runtime themselves.
-- [Claude](https://www.anthropic.com/claude) — the reasoning core every skill in this pack invokes.
+- [Obra](https://get-obra.com): managed-service deployment of these skills for hosts who do not want to run the runtime themselves.
+- [Claude](https://www.anthropic.com/claude): the reasoning core every skill in this pack invokes.

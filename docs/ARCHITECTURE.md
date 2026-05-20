@@ -29,24 +29,24 @@ The essay states the minimum specification for an architecture the guest will tr
 
 The essay claims these are not optional. This section explains why, by examining the weaker alternatives a thoughtful engineer would propose, and showing where each falls short of the trust shape the problem requires.
 
-### Property 1 — Guest data is uploaded to a runtime the host operates
+### Property 1: Guest data is uploaded to a runtime the host operates
 
-**Statement.** When a guest uploads a passport image, the bytes of that image traverse the network from the guest's device directly to a runtime running on the host's premises. The image does not transit through a vendor's server. It does not transit through the booking platform's server. The host's hardware is the first server to receive the image and the only server that stores it persistently. (Anthropic's commercial API endpoint receives the image transiently during inference — see [the data path](#the-data-path) below — under the host's own API key, with Zero Data Retention available for eligible accounts.)
+**Statement.** When a guest uploads a passport image, the bytes of that image traverse the network from the guest's device directly to a runtime running on the host's premises. The image does not transit through a vendor's server. It does not transit through the booking platform's server. The host's hardware is the first server to receive the image and the only server that stores it persistently. (Anthropic's commercial API endpoint receives the image transiently during inference, see [the data path](#the-data-path) below, under the host's own API key, with Zero Data Retention available for eligible accounts.)
 
-**Why this is necessary.** The guest's refusal to send a passport image through the booking platform's chat is not arbitrary. It is a response to the *centralization* of the channel. The objection is not to "this specific company" — it is to "any centralized intermediate." A solution that routes the image through any centralized intermediate inherits the same trust objection. The objection is structural; the solution must be structural to match it.
+**Why this is necessary.** The guest's refusal to send a passport image through the booking platform's chat is not arbitrary. It is a response to the *centralization* of the channel. The objection is not to "this specific company"; it is to "any centralized intermediate." A solution that routes the image through any centralized intermediate inherits the same trust objection. The objection is structural; the solution must be structural to match it.
 
 **The alternatives that fail this test:**
 
-- **Hosted SaaS with strong encryption.** The vendor still has access to the data (or could acquire it under subpoena, court order, employee misconduct, or breach). Encryption-in-transit and encryption-at-rest protect against external observers; they do not protect against the vendor itself. The guest's trust objection does not distinguish between "the vendor will misuse my data" and "the vendor could misuse my data" — both are sufficient to refuse.
+- **Hosted SaaS with strong encryption.** The vendor still has access to the data (or could acquire it under subpoena, court order, employee misconduct, or breach). Encryption-in-transit and encryption-at-rest protect against external observers; they do not protect against the vendor itself. The guest's trust objection does not distinguish between "the vendor will misuse my data" and "the vendor could misuse my data". Both are sufficient to refuse.
 - **EU data residency.** Solves the geographic-jurisdiction concern, not the trust concern. The data still lives on a vendor's server; the vendor's promises about access are still policy-based.
 - **Customer-managed keys.** Sounds like the data is under the customer's control, but in practice the keys are managed by the vendor's key-management service, and the vendor still operates the runtime that decrypts the data to process it. The trust position is unchanged.
 - **On-premises vendor product (hosted-on-customer-hardware but vendor-controlled).** Closer, but still depends on the vendor's update mechanism, telemetry collection, license-server beacons, support-debugger access, and a dozen other ways the vendor retains effective access. The host does not actually control what the software does on their hardware.
 
-**How Obra implements it.** The guest-facing channel (the secure upload page the guest interacts with) runs as a process on the host's machine, served from a local port over an authenticated session. The bytes of the passport image arrive at that process. They are written to the host-resident audit chain. They are transmitted to Anthropic's commercial API for inference under the host's own API key (Anthropic's commercial commitments apply: no training on customer API data, Zero Data Retention available for eligible accounts) and the response returns to the host's runtime. They are not transmitted anywhere else — not to the operator (Obra), not to the booking platform, not to a vendor's server, not to a SaaS provider. The only third-party network destination the image bytes ever reach is Anthropic, transiently, for inference. The SIBA portal and the operator-side telemetry channel carry payloads from which the image bytes are structurally absent. See [the data path](#the-data-path) below for the full end-to-end walkthrough.
+**How Obra implements it.** The guest-facing channel (the secure upload page the guest interacts with) runs as a process on the host's machine, served from a local port over an authenticated session. The bytes of the passport image arrive at that process. They are written to the host-resident audit chain. They are transmitted to Anthropic's commercial API for inference under the host's own API key (Anthropic's commercial commitments apply: no training on customer API data, Zero Data Retention available for eligible accounts) and the response returns to the host's runtime. They are not transmitted anywhere else: not to the operator (Obra), not to the booking platform, not to a vendor's server, not to a SaaS provider. The only third-party network destination the image bytes ever reach is Anthropic, transiently, for inference. The SIBA portal and the operator-side telemetry channel carry payloads from which the image bytes are structurally absent. See [the data path](#the-data-path) below for the full end-to-end walkthrough.
 
-### Property 2 — Inference runs under the host's own API key
+### Property 2: Inference runs under the host's own API key
 
-**Statement.** The Claude invocation that reads the passport image, extracts the identity data, generates draft communications, or makes any reasoning step about guest-specific content runs against an API endpoint authenticated as the host's, with the host's API key, charged to the host's account, with the prompt-and-response pair logged only in the host's local audit chain. Anthropic's commercial-API commitments apply: no training on customer API data, Zero Data Retention available for eligible accounts. The image bytes transit to Anthropic only for the duration of the inference call, and only inside the host's contractual relationship with Anthropic — the operator (Obra) is not party to that relationship.
+**Statement.** The Claude invocation that reads the passport image, extracts the identity data, generates draft communications, or makes any reasoning step about guest-specific content runs against an API endpoint authenticated as the host's, with the host's API key, charged to the host's account, with the prompt-and-response pair logged only in the host's local audit chain. Anthropic's commercial-API commitments apply: no training on customer API data, Zero Data Retention available for eligible accounts. The image bytes transit to Anthropic only for the duration of the inference call, and only inside the host's contractual relationship with Anthropic. The operator (Obra) is not party to that relationship.
 
 **Why this is necessary.** The guest's passport image, the guest's name, the guest's date of birth, and the host's reasoning about them are all special-category personal data under GDPR Article 9. The architecture must minimize the parties who see this data. The runtime that processes the data must be operated on behalf of the data subject's chosen counterparty (the host) and not on behalf of an intermediate vendor whose interests may diverge.
 
@@ -58,7 +58,7 @@ The essay claims these are not optional. This section explains why, by examining
 
 **How Obra implements it.** Anthropic publishes Claude as an API service that the host's runtime calls directly with the host's own API key. The host owns the key (stored in the operating system's secrets store, never logged, scoped to the connector that needs it). The runtime is operated by the host's own machine. Anthropic, as the API provider, is in the data-processing chain as a sub-processor under a Data Processing Agreement; this is unavoidable for any Claude-powered workflow and is the same posture as any other production Claude deployment. The architectural property here is that *no fourth party* sits between the host and Anthropic. The vendor (Obra) operates the runtime software but does not operate the runtime instance for the host; Obra does not have access to the host's API key, the host's prompts, or the host's responses.
 
-### Property 3 — Audit trail hash-chained and owned by the host
+### Property 3: Audit trail hash-chained and owned by the host
 
 **Statement.** Every action the runtime takes on the host's behalf emits an audit event whose payload is hash-chained to the prior event. The chain is stored on the host's hardware. The host owns the bytes. The host can produce the chain on demand for a regulator, a tax authority, a data subject under a GDPR Article 15 access request, or her own records, without anyone's permission.
 
@@ -72,16 +72,16 @@ The essay claims these are not optional. This section explains why, by examining
 
 **How Obra implements it.** Each audit event is a JSON object containing a payload-specific hash and a `previous_event_hash` field pointing at the prior event. The first event in a client's chain ("the genesis") is pinned by the operator-side ingester at first sight; any attempt to retroactively rewrite history is detectable by comparing against the pinned genesis (the ingester knows the genesis hash; the host cannot edit history without producing a chain that does not start with the pinned hash). The chain itself lives in a directory on the host's hardware (the JSONL files are append-only by convention and by file-system permissions); the host can export the chain at any time as a single file or stream. The witness-of-record layer ([planned, Phase 2a]) extends this with externally-anchored timestamping for stronger anti-replay guarantees.
 
-### Property 4 — Redacted-by-construction telemetry
+### Property 4: Redacted-by-construction telemetry
 
 **Statement.** Anything that flows from the host's runtime to the operator (Obra), to a vendor, or to any party outside the host's hardware, is restricted at the schema level to non-sensitive metadata: event types, counts, hashes, structured categorical decisions (without their reasons), and the timing of operations. Special-category data, business-content payloads, and the host's working reasoning never appear in any operator-side surface.
 
-**Why this is necessary.** Operating a managed-service product requires telemetry — the operator needs to know if a host's runtime crashed, if a workflow failed, if a connector encountered drift, if a host needs support. The naive approach is to capture rich logs that include "everything that happened" so the operator can debug effectively. The naive approach turns the operator into a second centralized data holder that re-creates the trust gap one level up from the platform. The architecture must make rich diagnostic value available to the operator while ensuring the diagnostic value never depends on operator access to the customer's actual data.
+**Why this is necessary.** Operating a managed-service product requires telemetry: the operator needs to know if a host's runtime crashed, if a workflow failed, if a connector encountered drift, if a host needs support. The naive approach is to capture rich logs that include "everything that happened" so the operator can debug effectively. The naive approach turns the operator into a second centralized data holder that re-creates the trust gap one level up from the platform. The architecture must make rich diagnostic value available to the operator while ensuring the diagnostic value never depends on operator access to the customer's actual data.
 
 **The alternatives that fail this test:**
 
 - **Standard SaaS logging with PII filters.** Filters are policy, not architecture. They run after the data has been captured; they depend on regex coverage; they fail silently when new data shapes appear. Provable from a careful read of the filtering code; not provable from a schema. Inevitably leaks.
-- **Operator-side encryption with customer-managed keys.** Doesn't solve the problem — the operator still has the ciphertext and can compel decryption (legal, contractual, or technical pressure).
+- **Operator-side encryption with customer-managed keys.** Doesn't solve the problem. The operator still has the ciphertext and can compel decryption (legal, contractual, or technical pressure).
 - **Customer-controlled telemetry opt-out.** Better but degrades the operator's ability to support the customer. Asymmetric incentive: hosts under stress will opt back in for support, then forget to opt out, then leak.
 
 **How Obra implements it.** The audit emitter, the connector framework, and the operator-side ingester all share a strict schema that defines exactly which event shapes can exist on the operator-side surface. The shape is defined in TypeScript as a Zod schema, validated at three points (emit-time on the host, transport-time at the shipper, ingest-time at the operator). Any field that could carry customer business content is structurally absent from the operator-side shape; the field exists only in the host-local audit chain. This is enforced at the type level (not at the runtime-filter level), which means a passport number cannot reach the operator because no operator-side schema field accepts a passport number. The boundary fix work documented elsewhere addresses the few remaining schema fields that could carry payload-shaped data via free-text reason fields or before/after state snapshots; those have been replaced with categorical hashes and structured class enums in [B1-B4 fixes shipped 2026-05-19].
@@ -94,33 +94,33 @@ The four properties above describe what the architecture is. This section descri
 
 The walkthrough below uses passport verification as the canonical example because it is the regulator-touching action with the highest sensitivity. Other extraction-heavy actions (invoice parsing, tax-document reading) follow the same path.
 
-### Step 1 — Guest device → host's runtime
+### Step 1: Guest device → host's runtime
 
-The guest accesses the secure-upload page on a URL that points at a process running on the host's hardware. The page is served over an authenticated session — the URL itself contains a per-reservation secret. The upload completes when the bytes of the image have transferred from the guest's device to the host's runtime, over an HTTPS connection terminated at the host's machine.
+The guest accesses the secure-upload page on a URL that points at a process running on the host's hardware. The page is served over an authenticated session. The URL itself contains a per-reservation secret. The upload completes when the bytes of the image have transferred from the guest's device to the host's runtime, over an HTTPS connection terminated at the host's machine.
 
 The image bytes are now at rest on the host's hardware. They are not at rest on a platform's server, a vendor's server, or any cloud storage outside the host's machine.
 
-### Step 2 — Host runtime → Anthropic API → host runtime
+### Step 2: Host runtime → Anthropic API → host runtime
 
 The host runtime invokes Claude via Anthropic's commercial API. The HTTPS request is authenticated with the host's own Anthropic API key (managed by the operating system's secrets store, never logged, never transmitted off the host's machine other than to Anthropic). The request payload contains the image bytes and the extraction prompt.
 
-The data is in transit between the host's machine and Anthropic's commercial API endpoint for the duration of this call. Anthropic's commercial-API commitments apply: no training on customer API data, Zero Data Retention available for eligible accounts (meaning the request payload is not persisted by Anthropic beyond the response). The response — a structured JSON payload containing the extracted identity fields — returns to the host's runtime.
+The data is in transit between the host's machine and Anthropic's commercial API endpoint for the duration of this call. Anthropic's commercial-API commitments apply: no training on customer API data, Zero Data Retention available for eligible accounts (meaning the request payload is not persisted by Anthropic beyond the response). The response, a structured JSON payload containing the extracted identity fields, returns to the host's runtime.
 
 This is the only step in which the image bytes leave the host's hardware. They reach exactly one third party (Anthropic), transiently, under a commercial contract the host owns directly.
 
-### Step 3 — Host runtime → host-resident storage
+### Step 3: Host runtime → host-resident storage
 
 The host runtime takes the extracted JSON from Step 2 and writes it into the host's persistent storage alongside the original image. The audit chain entry for the extraction action is computed and appended to the host-resident audit chain. The chain entry includes a hash of the image bytes and a hash of the extracted payload; it does not include the image bytes or the unredacted payload.
 
-### Step 4 — Host runtime → SIBA portal (regulatory submission)
+### Step 4: Host runtime → SIBA portal (regulatory submission)
 
-When the host approves the regulatory submission, the connector framework drives the SIBA portal over a browser session (the connector reference implementation uses Playwright). The fields submitted to SIBA are the eight fields SIBA requires; the underlying image bytes are not transmitted to SIBA (the SIBA portal does not accept the image — only the typed fields). The host's runtime is the only intermediary between the extracted JSON and the regulator's portal.
+When the host approves the regulatory submission, the connector framework drives the SIBA portal over a browser session (the connector reference implementation uses Playwright). The fields submitted to SIBA are the eight fields SIBA requires; the underlying image bytes are not transmitted to SIBA (the SIBA portal does not accept the image, only the typed fields). The host's runtime is the only intermediary between the extracted JSON and the regulator's portal.
 
-### Step 5 — Host runtime → operator-side telemetry (Obra)
+### Step 5: Host runtime → operator-side telemetry (Obra)
 
 The audit emitter ships redacted events to the operator-side ingester. The events contain event types, counts, hashes of underlying payloads, structured categorical decisions (without their text reasons), and timing of operations. They do not contain the image bytes, the extracted identity fields, the host's approval reason text, or any other element of the special-category data.
 
-The operator-side ingester pins the genesis of each host's audit chain at first sight, validates the redaction schema on every event it receives, and surfaces operator-visible analytics (workflow health, drift rates, failure modes) from the redacted stream. The operator has no path to the unredacted payloads — the host-local chain holds them, and the operator-side schema cannot represent them.
+The operator-side ingester pins the genesis of each host's audit chain at first sight, validates the redaction schema on every event it receives, and surfaces operator-visible analytics (workflow health, drift rates, failure modes) from the redacted stream. The operator has no path to the unredacted payloads. The host-local chain holds them, and the operator-side schema cannot represent them.
 
 ### Summary
 
@@ -130,15 +130,15 @@ The operator-side ingester pins the genesis of each host's audit chain at first 
 | 2 | Host runtime → Anthropic API → host runtime | Anthropic (transiently, under host's own API key) |
 | 3 | Host runtime → host-resident storage | Host hardware |
 | 4 | Host runtime → SIBA portal | SIBA receives extracted fields only, never the image |
-| 5 | Host runtime → operator-side telemetry | Operator never sees the image — only hashes and metadata |
+| 5 | Host runtime → operator-side telemetry | Operator never sees the image, only hashes and metadata |
 
-The operator (Obra) does not appear in Steps 1–4 at all. Step 5 is the only step where the operator is involved, and it is structurally constrained to redacted metadata.
+The operator (Obra) does not appear in Steps 1 to 4 at all. Step 5 is the only step where the operator is involved, and it is structurally constrained to redacted metadata.
 
 ### Anticipated upgrade paths
 
 The architecture admits two strengthening paths the design already anticipates. Neither is required at v1; both are reachable from the v1 design without re-architecting.
 
-**Hybrid extraction.** Step 2 above can be split: on-host OCR (open-source — Tesseract for the visual zone, an ICAO 9303 MRZ parser for the machine-readable zone) extracts the field strings from the image; only the extracted text — not the image bytes — is routed to Claude for reasoning, cross-check, and structured output. Under hybrid extraction, **the image bytes never leave the host's hardware at all**; the only data transmitted to Anthropic is the extracted text. This is a stronger privacy posture than the v1 design and is on the v1.5 roadmap.
+**Hybrid extraction.** Step 2 above can be split: on-host OCR (open-source, Tesseract for the visual zone, an ICAO 9303 MRZ parser for the machine-readable zone) extracts the field strings from the image; only the extracted text, not the image bytes, is routed to Claude for reasoning, cross-check, and structured output. Under hybrid extraction, **the image bytes never leave the host's hardware at all**; the only data transmitted to Anthropic is the extracted text. This is a stronger privacy posture than the v1 design and is on the v1.5 roadmap.
 
 **Anthropic on customer-controlled compute.** Anthropic's models are available through Amazon Bedrock and Google Cloud Vertex. A customer that requires inference data to stay inside their own cloud tenancy (e.g., a customer with a strict EU data-residency contract, or a customer deploying through a small operator who hosts inside their own AWS/GCP account in Frankfurt or Lisbon) can run the host runtime against a Bedrock or Vertex endpoint instead of the public Anthropic endpoint. The inference call still goes to Claude; the data never leaves the customer's own cloud account. This is the structurally tightest deployment posture and is available today; we expect to use it for customer cohorts where the data-residency contract demands it.
 
@@ -181,7 +181,7 @@ Three tiers govern how an action progresses from proposal to execution:
 
 ### Drift detection
 
-Connectors that interact with external systems (PMS portals, regulator portals, booking-platform APIs) declare drift signals — the symptoms of an external system having changed. If a connector encounters a drift signal (a selector no longer matches, an API response is unexpected, a portal returns an unknown error shape), the connector halts the action cleanly and emits a `drift_detected` event. No partial execution. No best-effort attempt to recover.
+Connectors that interact with external systems (PMS portals, regulator portals, booking-platform APIs) declare drift signals: the symptoms of an external system having changed. If a connector encounters a drift signal (a selector no longer matches, an API response is unexpected, a portal returns an unknown error shape), the connector halts the action cleanly and emits a `drift_detected` event. No partial execution. No best-effort attempt to recover.
 
 The drift-detection contract is opinionated for a reason: connectors that try to recover from drift by re-reasoning over the changed system end up making unverifiable decisions on the host's behalf. Halting on drift is conservative; the host gets notified, the connector maintainer ships a fix, and the runtime resumes from a known-good state.
 
@@ -197,19 +197,19 @@ The idempotency rule is what makes the system safe to retry. Without it, transie
 
 Anything that touches the regulator, the guest's money, or the host's reputation passes through three independent gates before it executes. The three-gate pillar is the architectural answer to "how does the system act in the world without acting unilaterally."
 
-### Gate 1 — Structured reasoning
+### Gate 1: Structured reasoning
 
 Claude proposes the action. The proposal is structured: a typed payload conforming to the connector's input schema, plus a natural-language explanation of why this particular action is appropriate for this particular context. The structured form means downstream gates can validate against schema, not against prose; the natural-language explanation lets the human reviewer audit the reasoning, not just the output.
 
-### Gate 2 — Adversarial review
+### Gate 2: Adversarial review
 
 A second Claude invocation reviews the proposal as a red team. The prompt is different: instead of "what should we do for this guest?" the second invocation gets "this is the proposal; what are the strongest reasons it could be wrong?" The second pass is asked to be specifically skeptical: hallucinated values, mismatched recipient, wrong workflow for the context, regulatory misclassification, unverified premises.
 
-The adversarial gate catches a specific class of failure: cases where the first invocation generated a confident-sounding wrong answer. It does not catch cases where both invocations could share the same hallucination (same input, same model, same context) — that class is handled by [the pre-proposal extraction agreement gate](#the-pre-proposal-extraction-agreement-gate) below.
+The adversarial gate catches a specific class of failure: cases where the first invocation generated a confident-sounding wrong answer. It does not catch cases where both invocations could share the same hallucination (same input, same model, same context). That class is handled by [the pre-proposal extraction agreement gate](#the-pre-proposal-extraction-agreement-gate) below.
 
-### Gate 3 — Human confirmation
+### Gate 3: Human confirmation
 
-The host sees the proposal, the adversarial review's verdict, the structured payload, and the natural-language reasoning. She has at least the dwell-time minimum (default 10 seconds for first-pilot operators) before the approve button becomes clickable. She enters a required reason — even if it's just "verified" — which is logged with her approval. She either approves the payload or rejects with a reason.
+The host sees the proposal, the adversarial review's verdict, the structured payload, and the natural-language reasoning. She has at least the dwell-time minimum (default 10 seconds for first-pilot operators) before the approve button becomes clickable. She enters a required reason, even if it's just "verified", which is logged with her approval. She either approves the payload or rejects with a reason.
 
 The human gate exists for the failures the other gates cannot catch:
 - Wrong values that pass both reasoning gates because the AI is confident
@@ -225,11 +225,11 @@ The gates do not guarantee zero hallucination outcomes. They guarantee that no a
 
 ## The pre-proposal extraction agreement gate
 
-A separate gate runs *before* Gate 1 for extraction-heavy actions — actions where Claude has to read unstructured input (a passport image, an invoice PDF, a tax document) and produce structured output (a typed identity payload, a line-item list, a parsed claim). This gate exists because the standard three-gate pillar catches the wrong class of failure on extraction work.
+A separate gate runs *before* Gate 1 for extraction-heavy actions: actions where Claude has to read unstructured input (a passport image, an invoice PDF, a tax document) and produce structured output (a typed identity payload, a line-item list, a parsed claim). This gate exists because the standard three-gate pillar catches the wrong class of failure on extraction work.
 
 ### The failure mode the standard gates miss
 
-If Claude misreads a passport number as `123456789` when the real value is `123456780`, Gate 1 (structured reasoning) generates a proposal with the wrong number. Gate 2 (adversarial review) is reasoning over the *proposal*, not the source image; it does not catch the misread. Gate 3 (human confirmation) sees the proposed payload; the host can catch the misread only if she compares against the source image visible to her in the verification UI. The architecture cannot rely on the human catching every misread — humans rubber-stamp under time pressure, and an 18-character document number is hard to verify against an image without careful side-by-side inspection.
+If Claude misreads a passport number as `123456789` when the real value is `123456780`, Gate 1 (structured reasoning) generates a proposal with the wrong number. Gate 2 (adversarial review) is reasoning over the *proposal*, not the source image; it does not catch the misread. Gate 3 (human confirmation) sees the proposed payload; the host can catch the misread only if she compares against the source image visible to her in the verification UI. The architecture cannot rely on the human catching every misread. Humans rubber-stamp under time pressure, and an 18-character document number is hard to verify against an image without careful side-by-side inspection.
 
 ### The agreement-gate pattern
 
@@ -252,7 +252,7 @@ compare(A, B) structured payloads field by field
     └── disagree → halt; escalate to human with both reads visible + the diff
 ```
 
-The critical property: Pass A and Pass B are **structurally different reads** of the same document. Pass A reads the printed visual fields. Pass B reads the MRZ — a standardized OCR-optimized format encoded at the bottom of every modern passport, with check digits that allow each value to self-validate. The MRZ is not just "the same data again"; it is the data in a different format, decoded by a different parser, with internal cross-validation.
+The critical property: Pass A and Pass B are **structurally different reads** of the same document. Pass A reads the printed visual fields. Pass B reads the MRZ: a standardized OCR-optimized format encoded at the bottom of every modern passport, with check digits that allow each value to self-validate. The MRZ is not just "the same data again"; it is the data in a different format, decoded by a different parser, with internal cross-validation.
 
 Genuine agreement between visual and MRZ is much stronger evidence the extraction is right than two visual reads. Two visual reads of the same image with the same model could agree on a misread because they share the same OCR-interpretation bias. Visual-vs-MRZ disagrees the moment the bias differs, and the MRZ's check digits surface OCR errors before they reach the comparison stage.
 
@@ -265,13 +265,13 @@ The agreement-gate is **structurally independent from the three-gate pillar.** I
 - **Cost:** 2× tokens on extraction-heavy actions only. Total operational cost increase is bounded: extraction actions are a small minority of total workflow actions in a typical deployment.
 - **Latency:** No wall-clock impact if passes run in parallel. The framework parallelizes by default.
 - **Shared-bias risk:** Both passes use the same model (Claude). If Claude has a systematic bias on a particular extraction shape (rare passport script, low-quality scan), both passes could agree on the wrong answer. Mitigations: deliberately varied prompts between Pass A and Pass B (different reading strategies); future cross-model verification when multi-model API access becomes available (Pass A on Sonnet, Pass B on Opus); sampling-based spot-checks where a percentage of agreed pairs are reviewed by humans, with results audited for systematic-agreement-but-wrong patterns.
-- **Escalation rate on legitimately ambiguous inputs:** smudged passports, low-resolution scans, edge-case document types. This is the *correct* behaviour — the architecture should escalate when uncertain — but the host-facing UX has to make manual verification fast, not punishing.
+- **Escalation rate on legitimately ambiguous inputs:** smudged passports, low-resolution scans, edge-case document types. This is the *correct* behaviour (the architecture should escalate when uncertain) but the host-facing UX has to make manual verification fast, not punishing.
 
 ---
 
 ## The audit chain
 
-Every action the runtime takes — autonomous or gated — emits one or more audit events. The events are hash-chained: each event includes the hash of the previous event, forming a tamper-evident sequence. The chain lives on the host's hardware.
+Every action the runtime takes, autonomous or gated, emits one or more audit events. The events are hash-chained: each event includes the hash of the previous event, forming a tamper-evident sequence. The chain lives on the host's hardware.
 
 ### Event shape
 
@@ -307,7 +307,7 @@ The chain bytes live in a directory on the host's hardware (the JSONL files are 
 - Hand the export to a regulator, a tax authority, a data subject under a GDPR Article 15 access request, or any third party they choose
 - Verify the chain themselves by running the local validator (which checks hash continuity from genesis to the latest event)
 
-The operator-side ingester holds a *copy* of the redacted events as they ship for operator-side analytics, but the operator's copy is not the source of truth — the host's local copy is. If the operator's copy ever conflicts with the host's, the host's wins.
+The operator-side ingester holds a *copy* of the redacted events as they ship for operator-side analytics, but the operator's copy is not the source of truth. The host's local copy is. If the operator's copy ever conflicts with the host's, the host's wins.
 
 ### Witness layer [PLANNED]
 
@@ -372,14 +372,14 @@ To be explicit about scope:
 
 ## References
 
-- **[The trust gap](the-trust-gap.md)** — the narrative essay that motivates this architecture
-- **[Skills](../skills/)** — the operational shape; Skill 02 (passport extraction with agreement gate) and Skill 03 (SEF submission) demonstrate the patterns documented here
-- **[Connectors](../connectors/)** — reference implementations of typed-action contracts; `sef-portal/` is first to land
-- **[Examples](../examples/)** — end-to-end worked transcripts showing the skills compose [arriving]
-- **`THREAT-MODEL.md`** [PLANNED] — the adversaries this architecture assumes and what it defends against natively
-- **`COMPLIANCE-NOTES.md`** [PLANNED] — fuller legal-citation treatment of the regulatory anchors referenced in the essay
-- **`DRIFT-PLAYBOOK.md`** [PLANNED] — operational response when external systems change
-- **[Anthropic Responsible Scaling Policy](https://www.anthropic.com/news/responsible-scaling-policy)** — Anthropic's framework for deploying frontier models safely; the architecture in this document is an instance of the deployment posture Anthropic articulates
+- **[The trust gap](the-trust-gap.md)**: the narrative essay that motivates this architecture
+- **[Skills](../skills/)**: the operational shape; Skill 02 (passport extraction with agreement gate) and Skill 03 (SEF submission) demonstrate the patterns documented here
+- **[Connectors](../connectors/)**: reference implementations of typed-action contracts; `sef-portal/` is first to land
+- **[Examples](../examples/)**: end-to-end worked transcripts showing the skills compose [arriving]
+- **`THREAT-MODEL.md`** [PLANNED]: the adversaries this architecture assumes and what it defends against natively
+- **`COMPLIANCE-NOTES.md`** [PLANNED]: fuller legal-citation treatment of the regulatory anchors referenced in the essay
+- **`DRIFT-PLAYBOOK.md`** [PLANNED]: operational response when external systems change
+- **[Anthropic Responsible Scaling Policy](https://www.anthropic.com/news/responsible-scaling-policy)**: Anthropic's framework for deploying frontier models safely; the architecture in this document is an instance of the deployment posture Anthropic articulates
 
 ---
 
