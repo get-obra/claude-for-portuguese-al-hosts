@@ -13,9 +13,9 @@ Long-form architecture, threat-model, and compliance reasoning that backs the op
 
 | File | Topic |
 |---|---|
-| `THREAT-MODEL.md` | The adversaries this pack assumes (operator-error, prompt injection, scan tampering, drift, supply-chain on the SEF portal). What the pack defends against natively versus what it relies on the runtime to defend. |
-| `COMPLIANCE-NOTES.md` | GDPR Article 9 reasoning, SEF reporting obligations under Decreto-Lei n.º 128/2014, AT month-end requirements, CNPD posture. Written by a non-lawyer for non-lawyers; review by qualified counsel encouraged before relying on any of it. |
-| `DRIFT-PLAYBOOK.md` | What to do when the SEF portal changes its DOM, when an issuing country's passport format changes, when a booking platform updates its API. The connector framework halts on drift; this playbook is the human's response. |
+| `THREAT-MODEL.md` | The adversaries this pack assumes (operator-error, prompt injection, scan tampering, drift, supply-chain on the SIBA portal). What the pack defends against natively versus what it relies on the runtime to defend. |
+| `COMPLIANCE-NOTES.md` | GDPR Article 9 reasoning, SIBA reporting obligations under Decreto-Lei n.º 128/2014, AT month-end requirements, CNPD posture. Written by a non-lawyer for non-lawyers; review by qualified counsel encouraged before relying on any of it. |
+| `DRIFT-PLAYBOOK.md` | What to do when the SIBA portal changes its DOM, when an issuing country's passport format changes, when a booking platform updates its API. The connector framework halts on drift; this playbook is the human's response. |
 
 ## Order of arrival
 

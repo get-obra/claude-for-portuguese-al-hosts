@@ -8,8 +8,8 @@ Contributions from people who actually know this domain are the most valuable ki
 
 - **Portuguese AL hosts** describing edge cases the canonical workflow does not cover yet.
 - **Accountants** familiar with AT month-end reporting and SAF-T PT format who can sharpen the accountant-handoff skill.
-- **Compliance professionals** with views on GDPR Article 9 handling, CNPD posture, and SEF reporting nuance.
-- **Developers** familiar with the SEF portal, Playwright automation, MCP connectors, and agentic-runtime composition.
+- **Compliance professionals** with views on GDPR Article 9 handling, CNPD posture, and SIBA reporting nuance.
+- **Developers** familiar with the SIBA portal, Playwright automation, MCP connectors, and agentic-runtime composition.
 - **Translators** who can review the multilingual welcome and in-stay support copy for naturalness in their language.
 
 ## How to contribute

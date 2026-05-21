@@ -17,7 +17,7 @@ Maintained by [Obra](https://get-obra.com). Released under Apache 2.0.
 A vacation rental host in Portugal opens her phone at six in the morning. A booking arrived overnight from a guest who speaks French. Before the guest arrives in seventy-two hours, she has to:
 
 1. Send a welcome email in French, written in her voice, asking for the guest's passport scan.
-2. Read the passport when it arrives, extract the identity data, and submit it to the **SEF** (Serviço de Estrangeiros e Fronteiras, the Portuguese border authority) within twenty-four hours of arrival. This is **mandatory under Portuguese tourism law**. Missed submissions carry substantial fines under Decreto-Lei n.º 128/2014.
+2. Read the passport when it arrives, extract the identity data, and submit it through **SIBA** (the Portuguese guest-registration system, at `siba.ssi.gov.pt`) within twenty-four hours of arrival. This is **mandatory under Portuguese tourism law**. Missed submissions carry substantial fines under Decreto-Lei n.º 128/2014. (SIBA was run by the SEF, the Portuguese border authority, until SEF was dissolved in 2023; the current term is SIBA.)
 3. Answer the guest's questions during the stay, in French, including which restaurants nearby, where the keys go, and whether the wifi works after the third time you reset it.
 4. After check-out, generate the invoice, hand a clean record to her accountant, and schedule the cleaning crew.
 
@@ -49,7 +49,7 @@ This is not a fire-and-forget automation pack. It is a labor-reduction-with-veri
 |---|---|---|---|
 | 01 | Pre-arrival welcome | Drafts the welcome email in the guest's native language, in the host's voice. Host approves before send. | Portuguese tourism law (Decreto-Lei n.º 128/2014) |
 | 02 | Passport extraction | Reads a passport scan; a second independent read cross-checks the numbers; host signs off on the result. | GDPR Article 9 (special-category data handling) |
-| 03 | SEF submission | Drives the SEF reporting portal to submit the host-approved identity report within the legally mandated twenty-four-hour window. | SEF reporting obligation (24h post-arrival) |
+| 03 | SIBA submission | Drives the SIBA portal to submit the host-approved identity report within the legally mandated twenty-four-hour window. | SIBA reporting obligation (24h post-arrival) |
 | 04 | In-stay support | Handles guest questions in their language during the stay, escalates judgment calls to the host, never invents policy. | Hospitality standard of care |
 | 05 | Accountant handoff | Generates the structured monthly record; host approves the figures; accountant signs off. Each reservation carries an audit-chain pointer. | Portuguese tax authority (AT) reporting + GDPR data-minimization |
 
@@ -69,7 +69,7 @@ The pack is opinionated about a small number of architectural choices that we be
 
 **Three independent gates on risky actions.** Anything that touches the regulator, the guest's money, or external systems passes through three checks: structured reasoning by Claude, adversarial review by a second Claude invocation, and human confirmation. Hallucinations cannot act unilaterally.
 
-**Audit by construction.** Every action emits an audit event whose payload is hash-chained to the prior event. The host owns the chain. She can hand it to the SEF, the AT, or the CNPD on demand without having to ask anyone's permission to export her own records.
+**Audit by construction.** Every action emits an audit event whose payload is hash-chained to the prior event. The host owns the chain. She can hand it to the authorities, the AT, or the CNPD on demand without having to ask anyone's permission to export her own records.
 
 **Redacted-by-construction telemetry.** Anything that flows to an operator, a vendor, or a remote observer is structurally limited to non-sensitive metadata (event types, counts, hashes). The architecture proves this rather than promises it.
 
@@ -86,7 +86,7 @@ The intended structure of the pack (each directory expands as content arrives):
 ```
 claude-for-portuguese-al-hosts/
 ├── skills/         # SKILL.md files Claude reads to do specific tasks
-├── connectors/     # MCP connector reference implementations (SEF portal first)
+├── connectors/     # MCP connector reference implementations (SIBA portal first)
 ├── examples/       # End-to-end worked transcripts with synthetic data
 ├── docs/           # Architecture, threat model, compliance notes
 ├── CONTRIBUTING.md
@@ -107,7 +107,7 @@ This pack is reference material. It is not a runnable application by itself. To 
 
 1. **An agentic runtime** that can read SKILL.md files and invoke MCP connectors. Examples: Claude Desktop with MCP, Anthropic Claude Code, or a managed-service provider such as Obra.
 2. **An Anthropic API key** (or equivalent Claude access) for the runtime to use.
-3. **Connector credentials** for whichever external systems the workflow needs to touch. Most relevantly: SEF portal access (the host already has this; her runtime needs scoped access through a secrets broker, not the raw credential).
+3. **Connector credentials** for whichever external systems the workflow needs to touch. Most relevantly: SIBA portal access (the host already has this; her runtime needs scoped access through a secrets broker, not the raw credential).
 4. **A machine the customer trusts** for the workflow to run on. This is typically the host's own laptop or a small home server.
 
 A minimal happy-path setup walkthrough lands in [examples/](examples/) as the example transcripts are written.
@@ -116,12 +116,12 @@ A minimal happy-path setup walkthrough lands in [examples/](examples/) as the ex
 
 ## Contributing
 
-Contributions from Portuguese AL hosts, accountants, developers familiar with the SEF portal, and anyone building Claude-powered workflows for regulated EU SMBs are welcome.
+Contributions from Portuguese AL hosts, accountants, developers familiar with the SIBA portal, and anyone building Claude-powered workflows for regulated EU SMBs are welcome.
 
 Areas where we especially want help:
 
 - **More language coverage** for the pre-arrival welcome skill (French, Spanish, German, Italian, Dutch, and Portuguese covered; English is the default).
-- **SEF portal robustness**: the portal occasionally changes its DOM. We want a community of contributors keeping the connector contract current.
+- **SIBA portal robustness**: the portal occasionally changes its DOM. We want a community of contributors keeping the connector contract current.
 - **Test fixtures** with synthetic passport scans for as many issuing countries as possible.
 - **Regulatory clarifications**: if you are a Portuguese tax lawyer or compliance professional and you see something we have stated incorrectly, please open an issue.
 

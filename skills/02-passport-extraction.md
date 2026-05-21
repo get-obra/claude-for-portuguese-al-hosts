@@ -26,11 +26,11 @@ audit_event_types:
 
 ## Purpose
 
-The host has received a guest identity document image: usually a passport, sometimes an EU national ID card, occasionally a residence permit. The image arrives through the guest-facing secure upload channel (see Skill 01 and the guest-facing channel skill for delivery mechanism). She needs the identity fields the Portuguese **SIBA portal** (operated under the SEF / AIMA reporting obligation) requires for the mandatory post-arrival report. Reading those fields off a phone-camera photo of a foreign-script document is tedious and error-prone, and a wrong value is a fine.
+The host has received a guest identity document image: usually a passport, sometimes an EU national ID card, occasionally a residence permit. The image arrives through the guest-facing secure upload channel (see Skill 01 and the guest-facing channel skill for delivery mechanism). She needs the identity fields the Portuguese **SIBA portal** (the guest-registration system; run by SEF until its 2023 dissolution, since administered by the authorities) requires for the mandatory post-arrival report. Reading those fields off a phone-camera photo of a foreign-script document is tedious and error-prone, and a wrong value is a fine.
 
 This skill does the reading work. It runs two independent extractions and only proceeds when they agree. The host's job is reduced to verification: she confirms or corrects what the skill extracted, then signs off.
 
-The skill does **not** submit to the SIBA portal. That is Skill 03 (`03-sef-submission.md`), which consumes this skill's verified output. The skill also does **not** collect the guest's home address. That field is required by SIBA but is not present on most identity documents, so it is collected separately via the guest-facing channel (see Skill 01).
+The skill does **not** submit to the SIBA portal. That is Skill 03 (`03-siba-submission.md`), which consumes this skill's verified output. The skill also does **not** collect the guest's home address. That field is required by SIBA but is not present on most identity documents, so it is collected separately via the guest-facing channel (see Skill 01).
 
 ## Input
 
@@ -136,7 +136,7 @@ The skill halts on:
 2. **MRZ check digit failed**. Likely cause: OCR misread of a critical character. The MRZ itself signals "do not trust this read." → Request a clearer photo.
 3. **Visual fields illegible**. Likely cause: image too blurry, low light, glare on the laminate. → Request a clearer photo.
 4. **Visual and MRZ disagree on any field**. Most consequential case: one of the two reads is wrong, and the skill cannot determine which. → Present both reads side by side to the host. She picks the correct value, types a custom value, or declines and requests a new image.
-5. **Document is not a passport** (e.g., the guest sent a national ID card, a driving licence, or a screenshot of a phone wallet). → Request a passport specifically. The SEF reporting obligation applies to passports for non-EU/EEA guests.
+5. **Document is not a passport** (e.g., the guest sent a national ID card, a driving licence, or a screenshot of a phone wallet). → Request a passport specifically. The SIBA reporting obligation applies to passports for foreign guests.
 
 Each escalation emits a structured audit event and presents the host with both the reason and the suggested next action.
 
@@ -199,7 +199,7 @@ This skill emits, at minimum:
 To be explicit about scope:
 
 - **Does not handle delivery of the secure-upload channel.** The guest-facing channel skill provides the secure upload page; this skill activates when an image arrives through that channel.
-- **Does not submit to SIBA.** Skill 03 (`03-sef-submission.md`) consumes this skill's verified payload and drives the SIBA portal.
+- **Does not submit to SIBA.** Skill 03 (`03-siba-submission.md`) consumes this skill's verified payload and drives the SIBA portal.
 - **Does not collect the guest's home address.** That field is required by SIBA but is not present on most identity documents; the guest-facing channel collects it as a typed input alongside the document image.
 - **Does not store document images long-term.** Per GDPR data minimization, the runtime is expected to discard the original image after the SIBA submission is acknowledged. Only the hashed extraction values land in the audit chain.
 - **Does not handle driving licences.** Driving licences are not accepted by SIBA as identity documents for guest registration. If the guest sends one, the skill halts with `halt_unreadable / wrong_document_type` and the runtime requests a passport, national ID, or residence permit.
@@ -285,7 +285,7 @@ Status: `halt_unreadable` with reason `mrz_check_digit_failed`.
 
 - `claude-vision` connector for image input to Claude.
 - An inbox connector that delivered the image (WhatsApp, email, or booking DM).
-- Skill 03 (`03-sef-submission.md`) as the downstream consumer of the verified payload.
+- Skill 03 (`03-siba-submission.md`) as the downstream consumer of the verified payload.
 - The host's voice model (see Skill 01) for escalation message drafting.
 
 ## Versioning

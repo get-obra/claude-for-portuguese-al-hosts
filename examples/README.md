@@ -6,7 +6,7 @@ End-to-end worked transcripts showing how the skills in this pack compose into r
 
 | # | File | Scenario |
 |---|---|---|
-| 01 | `01-french-guest-arrival.md` | A French-speaking guest books for next week. Pre-arrival welcome -> passport extraction with agreement gate -> SEF submission. Host signs off at each gate. |
+| 01 | `01-french-guest-arrival.md` | A French-speaking guest books for next week. Pre-arrival welcome -> passport extraction with agreement gate -> SIBA submission. Host signs off at each gate. |
 | 02 | `02-wifi-question-saturday-night.md` | A guest messages the host at 11 PM on a Saturday asking for the wifi password. In-stay support handles routine; escalates a follow-up complaint about noise. |
 | 03 | `03-month-end-accountant.md` | End of the month. Monthly record generated, host approves figures, accountant signs off. |
 

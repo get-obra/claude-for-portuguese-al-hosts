@@ -342,7 +342,7 @@ By design, the operator's view of any client is structurally limited:
 **The operator CAN see:**
 - Event types and counts (Skill 02 ran 47 times this month for client X)
 - Categorical decisions (47 extractions agreed; 3 disagreed and escalated)
-- Drift signals (the SEF portal selector changed on date Y)
+- Drift signals (the SIBA portal selector changed on date Y)
 - System health (connector errors, runtime crashes, version drift)
 - Audit chain integrity (genesis pinned; chain continuous; current head hash)
 
@@ -373,8 +373,8 @@ To be explicit about scope:
 ## References
 
 - **[The trust gap](the-trust-gap.md)**: the narrative essay that motivates this architecture
-- **[Skills](../skills/)**: the operational shape; Skill 02 (passport extraction with agreement gate) and Skill 03 (SEF submission) demonstrate the patterns documented here
-- **[Connectors](../connectors/)**: reference implementations of typed-action contracts; `sef-portal/` is first to land
+- **[Skills](../skills/)**: the operational shape; Skill 02 (passport extraction with agreement gate) and Skill 03 (SIBA submission) demonstrate the patterns documented here
+- **[Connectors](../connectors/)**: reference implementations of typed-action contracts; `siba-portal/` is first to land
 - **[Examples](../examples/)**: end-to-end worked transcripts showing the skills compose [arriving]
 - **`THREAT-MODEL.md`** [PLANNED]: the adversaries this architecture assumes and what it defends against natively
 - **`COMPLIANCE-NOTES.md`** [PLANNED]: fuller legal-citation treatment of the regulatory anchors referenced in the essay

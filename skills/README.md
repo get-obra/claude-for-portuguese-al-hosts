@@ -8,7 +8,7 @@ Each skill in this directory is a single Markdown file with structured frontmatt
 |---|---|---|---|
 | 01 | [`01-pre-arrival-welcome.md`](01-pre-arrival-welcome.md) | Drafts the welcome message in the guest's native language, in the host's voice. Produces both a chat body (no text URL, platform-policy-compliant) and a welcome PDF (with embedded QR encoding the secure-upload URL). Host approves both before send. | `v0.1.0` |
 | 02 | [`02-passport-extraction.md`](02-passport-extraction.md) | Reads a guest identity document (passport / national ID / residence permit); a second independent MRZ read cross-checks the numbers via ICAO 9303 check digits; host signs off on the result. | `v0.2.0` |
-| 03 | [`03-sef-submission.md`](03-sef-submission.md) | Drives the SIBA reporting portal to submit the host-approved boletim de alojamento within the legally mandated window. Idempotency, drift detection, host final review with dwell timer. | `v0.2.0` |
+| 03 | [`03-siba-submission.md`](03-siba-submission.md) | Drives the SIBA reporting portal to submit the host-approved boletim de alojamento within the legally mandated window. Idempotency, drift detection, host final review with dwell timer. | `v0.2.0` |
 
 ## Planned
 
@@ -40,5 +40,5 @@ Welcome via pull request. The high-leverage areas right now:
 
 - **More language baselines** for Skill 01 (Italian, Dutch, Polish, Mandarin queued for native-speaker review)
 - **More document-type coverage** for Skill 02 (non-EU national IDs with different MRZ shapes)
-- **Connector contributions** under [`/connectors/`](../connectors/). `sef-portal/` is the priority for Skill 03 to ship runnable
+- **Connector contributions** under [`/connectors/`](../connectors/). `siba-portal/` is the priority for Skill 03 to ship runnable
 - **Edge cases** from anyone running this stack against real reservations

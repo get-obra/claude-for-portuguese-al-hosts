@@ -1,11 +1,11 @@
 ---
-name: 03-sef-submission
+name: 03-siba-submission
 version: 0.3.0
 description: Consumes the verified GuestIdentityPayload from Skill 02 + the residence details collected by the guest-facing channel, and files the boletim de alojamento on the SIBA portal (siba.ssi.gov.pt) within the legally mandated window. SIBA uses a list/batch model: each guest is added to a list, then the whole list is sent. Host signs off on each filled form before it is saved, and explicitly sends the list. Captures the SIBA confirmation in the audit chain.
 tier: gated
 requires_extraction_agreement: false
 connector_dependencies:
-  - sef-portal
+  - siba-portal
 human_signoff: true
 idempotency_key: "reservation_id + arrival_date + document_number_hash"
 regulatory_anchor:
@@ -30,7 +30,7 @@ audit_event_types:
 
 ## Purpose
 
-The host has a verified identity payload for a newly-arrived guest, produced by [Skill 02 (`02-passport-extraction.md`)](02-passport-extraction.md). She also has the reservation context: the property where the guest is staying, the arrival date, and the planned check-out date. Portuguese tourism law obliges her to submit a *boletim de alojamento*, a guest registration record, to the SIBA portal operated by the border authority within the legally mandated window after the guest's arrival. Missing this submission carries substantial fines.
+The host has a verified identity payload for a newly-arrived guest, produced by [Skill 02 (`02-passport-extraction.md`)](02-passport-extraction.md). She also has the reservation context: the property where the guest is staying, the arrival date, and the planned check-out date. Portuguese tourism law obliges her to submit a *boletim de alojamento*, a guest registration record, to the SIBA portal operated by the authorities within the legally mandated window after the guest's arrival. Missing this submission carries substantial fines.
 
 This skill drives the submission. It does not propose new identity data; it consumes what Skill 02 already verified and the host already approved. Its job is to fill the SIBA form correctly, surface the filled form for one final human review before the submit action executes, and then submit, capture, and audit-log the receipt.
 
@@ -38,7 +38,7 @@ The skill does **not** decide whether to submit. Submission is the regulatory ba
 
 ## Regulatory note
 
-> **Authority status (2026 alpha):** SEF (Serviço de Estrangeiros e Fronteiras) was reorganized in 2023; the boletim-de-alojamento reporting obligation now sits with AIMA (Agência para a Integração, Migrações e Asilo). As of the 2026 live-portal observation, the SIBA boletim system is served on the **SSI domain** (Sistema de Segurança Interna) at **`siba.ssi.gov.pt`**. The boletim entry form is `/S/bal/RegistaBoletins.aspx`, reached from the submission-lists page (`/S/bal/LotesEnvio.aspx`). This skill's connector binding (`sef-portal`) is the canonical name in this pack for historical continuity; the connector itself follows the live endpoint. Any change is flagged via `drift_detected` events and surfaced to the host as a runtime alert.
+> **Authority status (2026 alpha):** SEF (Serviço de Estrangeiros e Fronteiras) was reorganized in 2023; the boletim-de-alojamento reporting obligation now sits with AIMA (Agência para a Integração, Migrações e Asilo). As of the 2026 live-portal observation, the SIBA boletim system is served on the **SSI domain** (Sistema de Segurança Interna) at **`siba.ssi.gov.pt`**. The boletim entry form is `/S/bal/RegistaBoletins.aspx`, reached from the submission-lists page (`/S/bal/LotesEnvio.aspx`). This skill's connector binding (`siba-portal`) follows the live endpoint. Any change is flagged via `drift_detected` events and surfaced to the host as a runtime alert.
 
 > **Authentication model:** AL operators authenticate to the SIBA portal with credentials issued at AL registration, scoped through the secrets broker, stored in the operating system's secrets store, never logged. The exact SIBA login mechanism (single access code vs. user/password) is **pending precise live verification**. The connector treats it as a scoped credential set regardless. Per the local-first model, the human logs in interactively where possible so credentials are entered by hand and never stored in plaintext by the runtime.
 
@@ -96,7 +96,7 @@ SibaReceipt {
 
 ## The submission flow
 
-The skill is a sequence of typed actions invoked against the `sef-portal` connector. It is not a free-form agentic loop. Every step is declared, deterministic, and audit-logged.
+The skill is a sequence of typed actions invoked against the `siba-portal` connector. It is not a free-form agentic loop. Every step is declared, deterministic, and audit-logged.
 
 ### Step 1: Idempotency check
 
@@ -238,7 +238,7 @@ The operator-side dashboard receives the same `drift_detected` event; the connec
 ## Dependencies
 
 - [`02-passport-extraction.md`](02-passport-extraction.md): produces the verified identity payload this skill consumes.
-- [`connectors/sef-portal/`](../connectors/sef-portal/): Playwright-driven SIBA portal automation with pinned selectors and drift detection.
+- [`connectors/siba-portal/`](../connectors/siba-portal/): Playwright-driven SIBA portal automation with pinned selectors and drift detection.
 - A notification connector (WhatsApp or email) for the receipt acknowledgement message back to the host.
 - A secrets broker holding the host's SIBA portal credentials.
 
