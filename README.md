@@ -4,7 +4,7 @@
 
 Maintained by [Obra](https://get-obra.com). Released under Apache 2.0.
 
-> **Status:** alpha, in active development. This README describes the intended shape of the pack as it ships. Skill content, connector implementation, and example transcripts arrive over the coming weeks. See [Status](#status) for the timeline.
+> **Status:** alpha, in active development. Published here now: the trust-gap essay, the architecture document, and the first three skills (pre-arrival welcome, passport extraction, SIBA submission). Still landing over the coming weeks: skills 04 and 05, the connector reference implementations, and the worked example transcripts. See [Status](#status) for the timeline.
 
 > **Start here.** The two depth pieces, in reading order:
 > 1. *[The trust gap](docs/the-trust-gap.md)*: the narrative essay on why this work exists. Canonical version at [get-obra.com/the-trust-gap](https://get-obra.com/the-trust-gap). ~10 min read.
@@ -29,7 +29,7 @@ This is the kind of work Claude does extremely well. The problem is not capabili
 - The host needs an **audit trail** she can hand to the tax authority or the data regulator on demand.
 - The host has never written a line of code and is not going to wire up a multi-tool agentic workflow herself.
 
-This repository is the open-source reference pack for that shape of work. It provides the skills, MCP connector contracts, example transcripts, and architectural guidance for building Claude-powered automation that meets Portuguese AL hosts where they are, with the compliance posture their regulators require.
+This repository is the open-source reference pack for that shape of work. It provides the skills and the architectural guidance for building Claude-powered automation that meets Portuguese AL hosts where they are, with the compliance posture their regulators require. The MCP connector contracts and example transcripts land as the pilot validates them.
 
 ---
 
@@ -52,6 +52,8 @@ This is not a fire-and-forget automation pack. It is a labor-reduction-with-veri
 | 03 | SIBA submission | Drives the SIBA portal to submit the host-approved identity report within the legally mandated twenty-four-hour window. | SIBA reporting obligation (24h post-arrival) |
 | 04 | In-stay support | Handles guest questions in their language during the stay, escalates judgment calls to the host, never invents policy. | Hospitality standard of care |
 | 05 | Accountant handoff | Generates the structured monthly record; host approves the figures; accountant signs off. Each reservation carries an audit-chain pointer. | Portuguese tax authority (AT) reporting + GDPR data-minimization |
+
+Skills 01 to 03 are published in [skills/](skills/) now. Skills 04 and 05 are on the roadmap and land as the pilot reaches those stages.
 
 Each skill is designed to be **composed by an agentic runtime** (your own, or a managed-service provider like Obra) rather than to run standalone. The skills do not assume any particular orchestration framework. They assume Claude is the reasoning core, and that whatever runtime is calling them is responsible for credential handling, audit logging, and human-in-the-loop gating.
 
@@ -79,9 +81,9 @@ These principles align with the broader responsible-deployment posture Anthropic
 
 ## Status
 
-**Alpha, in active development.** This pack is being published in support of an active pilot launching summer 2026 with an independent Portuguese vacation rental host. Skill instructions, connector contracts, and example transcripts arrive over the coming weeks as the pilot validates them against real reservations.
+**Alpha, in active development.** This pack is being published in support of an active pilot launching summer 2026 with an independent Portuguese vacation rental host. Published so far: the trust-gap essay, the architecture document, and the first three skills (pre-arrival welcome, passport extraction, SIBA submission). Still landing over the coming weeks, as the pilot validates them against real reservations: skills 04 and 05, the connector reference implementations (SIBA portal first), and the worked example transcripts.
 
-The intended structure of the pack (each directory expands as content arrives):
+The structure of the pack (the connectors and examples directories expand as content arrives):
 
 ```
 claude-for-portuguese-al-hosts/
@@ -95,9 +97,9 @@ claude-for-portuguese-al-hosts/
 └── README.md       # This file
 ```
 
-Each directory currently contains a README explaining what is planned and the order it will be built in.
+The skills and docs directories are populated now. The connectors and examples directories currently contain a README explaining what is planned and the order it will be built in.
 
-Breaking changes are possible during alpha but will be called out in a CHANGELOG once skill files start landing. The intention is to reach a stable v1.0 release after the first ten paying customers, which we expect by the end of 2026.
+Breaking changes are possible during alpha and are called out in the [CHANGELOG](CHANGELOG.md). The intention is to reach a stable v1.0 release after the first ten paying customers, which we expect by the end of 2026.
 
 ---
 
