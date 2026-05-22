@@ -43,6 +43,21 @@ This is not a fire-and-forget automation pack. It is a labor-reduction-with-veri
 
 ---
 
+## See the interaction model in motion
+
+[Watch the living demo](https://get-obra.com/demo/living-canvas.html) (also [em português](https://get-obra.com/demo/living-canvas-pt.html)): a self-running walkthrough of a full day of host operations, end to end.
+
+It is more than a demo. It is the canonical interaction model this whole pack is built around, the shape every workflow takes when Obra runs it for real:
+
+- the board is where Obra reasons; the chat is only the host's voice
+- a gated step stops and waits for your yes before anything leaves the building
+- routines stay open until they are truly done, and anything that needs you reaches you, even on your phone
+- every document is read, verified against its source, used, and then provably deleted, with a receipt on the audit chain
+
+The behaviors in the walkthrough are real and tested, already run on Obra. This is a faithful, dramatized view of how the product works, not a concept.
+
+---
+
 ## The skills
 
 | # | Skill | What it does | Regulatory anchor |
