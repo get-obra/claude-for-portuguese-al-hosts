@@ -6,7 +6,8 @@ Long-form architecture, threat-model, and compliance reasoning that backs the op
 
 | File | Topic |
 |---|---|
-| [`the-trust-gap.md`](the-trust-gap.md) | **Essay.** How Europe's short-term rental compliance silently breaks at the channel layer, and what kind of infrastructure is required to fix it. The narrative reasoning that motivates the architectural choices in this pack. Canonical version at [get-obra.com/the-trust-gap](https://get-obra.com/the-trust-gap). |
+| [`the-trust-gap.md`](the-trust-gap.md) | **Essay (first).** How Europe's short-term rental compliance silently breaks at the channel layer, and what kind of infrastructure is required to fix it. The narrative reasoning that motivates the architectural choices in this pack. Canonical version at [get-obra.com/the-trust-gap](https://get-obra.com/the-trust-gap). |
+| [`the-unenforced-law.md`](the-unenforced-law.md) | **Essay (second, follow-on).** Why a market with a real, universally-known compliance problem has no buyers, and the architecture worth building before the trigger event arrives. Names the existing tools honestly and distinguishes filing from verification. Canonical version at [get-obra.com/the-unenforced-law](https://get-obra.com/the-unenforced-law). |
 | [`ARCHITECTURE.md`](ARCHITECTURE.md) | **Architecture.** The engineer-readable mechanism document. Defends the four architectural properties from the essay with case-by-case analysis of why weaker alternatives fail. Covers the connector framework (typed actions, tier classification, drift detection, idempotency), the three-gate trust pillar (structured reasoning + adversarial review + human confirmation), the pre-proposal extraction agreement gate (visual vs. MRZ on passports), the audit chain (hash-chained, customer-owned, redacted-by-construction telemetry), and the action authorization model. |
 
 ## Planned documents

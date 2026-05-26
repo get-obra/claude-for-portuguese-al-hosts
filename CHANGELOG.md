@@ -6,7 +6,16 @@ The pack contains multiple independently-versioned components (skills, connector
 
 ---
 
-## 2026-05-20 (latest, Skills 02 + 03 v0.3.0: live-portal correction)
+## 2026-05-26 (latest, Essay: the unenforced law)
+
+### Documentation
+
+- **Published** `docs/the-unenforced-law.md`: the second essay in the series. Diagnoses why a market with a real, universally-known short-term rental compliance gap has no buyers, names the existing tools honestly with what they file and what they verify (Chekin, ChargeAutomation, Sincro, SEFScan, SIBA GO, Homeit, CheckinScan, Your.Rentals, Ynnov, Smoobu, Hostaway, Avantio, Lodgify, Hostfully covered), distinguishes filing from verification, and explains the architecture worth building before the trigger event arrives. Quotes Hostaway's own support documentation on identity verification verbatim, with the source URL. Canonical version at [get-obra.com/the-unenforced-law](https://get-obra.com/the-unenforced-law). ~2,950 words.
+- **Updated** `README.md` and `docs/README.md` to feature both essays in the "Start here" / Published lists.
+
+---
+
+## 2026-05-20 (Skills 02 + 03 v0.3.0: live-portal correction)
 
 Both regulator-facing skills corrected against the **live SIBA portal** (`siba.ssi.gov.pt`), observed end-to-end during first-pilot preparation. The earlier v0.2 field set was a secondary-source approximation and was wrong in several specifics.
 
