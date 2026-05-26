@@ -4,11 +4,12 @@
 
 Maintained by [Obra](https://get-obra.com). Released under Apache 2.0.
 
-> **Status:** alpha, in active development. Published here now: the trust-gap essay, the architecture document, and the first three skills (pre-arrival welcome, passport extraction, SIBA submission). Still landing over the coming weeks: skills 04 and 05, the connector reference implementations, and the worked example transcripts. See [Status](#status) for the timeline.
+> **Status:** alpha, in active development. Published here now: both essays (the trust gap, the unenforced law), the architecture document, and the first three skills (pre-arrival welcome, passport extraction, SIBA submission). Still landing over the coming weeks: skills 04 and 05, the connector reference implementations, and the worked example transcripts. See [Status](#status) for the timeline.
 
-> **Start here.** The two depth pieces, in reading order:
+> **Start here.** The three depth pieces, in reading order:
 > 1. *[The trust gap](docs/the-trust-gap.md)*: the narrative essay on why this work exists. Canonical version at [get-obra.com/the-trust-gap](https://get-obra.com/the-trust-gap). ~10 min read.
-> 2. *[Architecture](docs/ARCHITECTURE.md)*: the engineer-readable mechanism behind the essay's claims. Defends the four architectural properties, documents the connector framework, the three-gate trust pillar, the pre-proposal extraction agreement gate, and the audit chain. ~20 min read.
+> 2. *[The unenforced law](docs/the-unenforced-law.md)*: the follow-on essay on why a market with a real, universally-known compliance problem has no buyers, and what kind of architecture matters on the morning the law gets enforced. Canonical version at [get-obra.com/the-unenforced-law](https://get-obra.com/the-unenforced-law). ~12 min read.
+> 3. *[Architecture](docs/ARCHITECTURE.md)*: the engineer-readable mechanism behind the essays' claims. Defends the four architectural properties, documents the connector framework, the three-gate trust pillar, the pre-proposal extraction agreement gate, and the audit chain. ~20 min read.
 
 ---
 
@@ -96,7 +97,7 @@ These principles align with the broader responsible-deployment posture Anthropic
 
 ## Status
 
-**Alpha, in active development.** This pack is being published in support of an active pilot launching summer 2026 with an independent Portuguese vacation rental host. Published so far: the trust-gap essay, the architecture document, and the first three skills (pre-arrival welcome, passport extraction, SIBA submission). Still landing over the coming weeks, as the pilot validates them against real reservations: skills 04 and 05, the connector reference implementations (SIBA portal first), and the worked example transcripts.
+**Alpha, in active development.** This pack is being published in support of an active pilot launching summer 2026 with an independent Portuguese vacation rental host. Published so far: both essays (the trust gap, the unenforced law), the architecture document, and the first three skills (pre-arrival welcome, passport extraction, SIBA submission). Still landing over the coming weeks, as the pilot validates them against real reservations: skills 04 and 05, the connector reference implementations (SIBA portal first), and the worked example transcripts.
 
 The structure of the pack (the connectors and examples directories expand as content arrives):
 
