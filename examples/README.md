@@ -2,13 +2,13 @@
 
 End-to-end worked transcripts showing how the skills in this pack compose into real workflows. Each example walks through a complete scenario with synthetic but representative data, calling out where the AI proposes, where the host signs off, and what lands in the audit chain.
 
-## Planned examples
+## Examples
 
-| # | File | Scenario |
-|---|---|---|
-| 01 | `01-french-guest-arrival.md` | A French-speaking guest books for next week. Pre-arrival welcome -> passport extraction with agreement gate -> SIBA submission. Host signs off at each gate. |
-| 02 | `02-wifi-question-saturday-night.md` | A guest messages the host at 11 PM on a Saturday asking for the wifi password. In-stay support handles routine; escalates a follow-up complaint about noise. |
-| 03 | `03-month-end-accountant.md` | End of the month. Monthly record generated, host approves figures, accountant signs off. |
+| # | File | Scenario | Status |
+|---|---|---|---|
+| 01 | [`01-french-guest-arrival.md`](01-french-guest-arrival.md) | A French-speaking guest books for next week. Pre-arrival welcome -> passport extraction with agreement gate -> SIBA submission. Host signs off at each gate. | **Published** |
+| 02 | `02-wifi-question-saturday-night.md` | A guest messages the host at 11 PM on a Saturday asking for the wifi password. In-stay support handles routine; escalates a follow-up complaint about noise. | Planned |
+| 03 | `03-month-end-accountant.md` | End of the month. Monthly record generated, host approves figures, accountant signs off. | Planned |
 
 ## What each example shows
 
@@ -27,4 +27,4 @@ All data in these examples is synthetic. No real guest names, real passport numb
 
 ## Status
 
-Active development. The first example transcript (01) will land alongside the first skill files. Contributions welcome once example 01 is published.
+Active development. Example 01 (French guest arrival) is published, walking the full pre-arrival -> document extraction -> SIBA submission flow end to end with synthetic data. Examples 02 and 03 are planned and land next. Contributions welcome.
