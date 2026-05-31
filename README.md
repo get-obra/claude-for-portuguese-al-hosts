@@ -2,7 +2,7 @@
 
 > A reference pack for building Claude-powered automation for Portuguese vacation rental hosts ("Alojamento Local" operators) under EU and Portuguese regulatory obligations.
 
-Maintained by [Obra](https://get-obra.com). Released under Apache 2.0.
+Maintained by [Obra](https://get-obra.com). Released under Apache 2.0. Follow on X: [@getobra](https://x.com/getobra).
 
 > **Status:** alpha, in active development. Published here now: both essays (the trust gap, the unenforced law), the architecture document, and the first three skills (pre-arrival welcome, passport extraction, SIBA submission). Still landing over the coming weeks: skills 04 and 05, the connector reference implementations, and the worked example transcripts. See [Status](#status) for the timeline.
 
